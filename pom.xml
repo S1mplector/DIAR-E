@@ -1,0 +1,48 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>dev.diar</groupId>
+  <artifactId>diar-build-parent</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>DIAR-E Parent</name>
+
+  <modules>
+    <module>diar-core</module>
+    <module>diar-application</module>
+    <module>diar-adapter-persistence-sqlite</module>
+    <module>diar-adapter-audio</module>
+    <module>diar-ui-desktop</module>
+    <module>diar-bootstrap</module>
+  </modules>
+
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <javafx.version>21.0.3</javafx.version>
+    <junit.jupiter.version>5.10.2</junit.jupiter.version>
+    <flyway.version>10.16.0</flyway.version>
+    <sqlite.jdbc.version>3.46.0.0</sqlite.jdbc.version>
+    <hikari.version>5.1.0</hikari.version>
+  </properties>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.2.5</version>
+          <configuration>
+            <useModulePath>false</useModulePath>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-maven-plugin</artifactId>
+          <version>0.0.8</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>
