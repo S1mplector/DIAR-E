@@ -7,12 +7,12 @@
   <name>DIAR-E Parent</name>
 
   <modules>
-    <module>diar-core</module>
-    <module>diar-application</module>
-    <module>diar-adapter-persistence-sqlite</module>
-    <module>diar-adapter-audio</module>
-    <module>diar-ui-desktop</module>
-    <module>diar-bootstrap</module>
+    <module>src/core/diar-core</module>
+    <module>src/app/diar-application</module>
+    <module>src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite</module>
+    <module>src/adapter/audio/diar-adapter-audio</module>
+    <module>src/ui/desktop/diar-ui-desktop</module>
+    <module>src/bootstrap/diar-bootstrap</module>
   </modules>
 
   <properties>

@@ -1,0 +1,3 @@
+dev/diar/adapter/persistence/sqlite/SqliteSettingsRepository.class
+dev/diar/adapter/persistence/sqlite/DatabaseMigrator.class
+dev/diar/adapter/persistence/sqlite/SQLiteDataSourceFactory.class

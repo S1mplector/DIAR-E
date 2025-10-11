@@ -1,0 +1,8 @@
+dev/diar/app/port/TowerRepository.class
+dev/diar/app/port/SettingsRepository.class
+dev/diar/app/port/RecordingRepository.class
+dev/diar/app/port/CategoryRepository.class
+dev/diar/app/port/LogRepository.class
+dev/diar/app/service/MorningRoutineService.class
+dev/diar/app/port/ClockPort.class
+dev/diar/app/port/AudioCapturePort.class

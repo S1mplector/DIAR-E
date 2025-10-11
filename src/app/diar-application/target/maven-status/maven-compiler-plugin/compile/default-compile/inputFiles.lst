@@ -1,0 +1,8 @@
+/home/sim/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/port/AudioCapturePort.java
+/home/sim/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/port/CategoryRepository.java
+/home/sim/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/port/ClockPort.java
+/home/sim/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/port/LogRepository.java
+/home/sim/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/port/RecordingRepository.java
+/home/sim/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/port/SettingsRepository.java
+/home/sim/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/port/TowerRepository.java
+/home/sim/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/MorningRoutineService.java
