@@ -1,4 +1,11 @@
-# Maven build output
+# Byte-compiled / optimized / DLL files
+*.class
+*.jar
+*.war
+*.ear
+*.so
+*.dll
+*.exe# Maven build output
 target/
 **/target/
 

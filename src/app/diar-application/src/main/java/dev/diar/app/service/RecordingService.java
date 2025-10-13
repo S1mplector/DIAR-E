@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.AudioFormat;
 
 public class RecordingService {
     private final RecordingRepository recordingRepository;
@@ -49,11 +52,23 @@ public class RecordingService {
         try {
             Path filePath = audioCapturePort.stopRecording();
 
+            Integer durationSeconds = null;
+            try (AudioInputStream ais = AudioSystem.getAudioInputStream(filePath.toFile())) {
+                AudioFormat format = ais.getFormat();
+                long frames = ais.getFrameLength();
+                if (frames > 0 && format.getFrameRate() > 0) {
+                    double seconds = frames / format.getFrameRate();
+                    durationSeconds = (int) Math.round(seconds);
+                }
+            } catch (Exception ignored) {
+                // Leave duration as null if we cannot read it
+            }
+
             Recording recording = new Recording(
                 recordingId,
                 filePath.toString(),
                 clock.now(),
-                null // Duration will be calculated later if needed
+                durationSeconds
             );
             recordingRepository.save(recording);
 

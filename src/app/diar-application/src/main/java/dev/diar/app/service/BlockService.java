@@ -64,6 +64,17 @@ public class BlockService {
                     clock.today()
                 );
                 towerRepository.save(completedTower);
+
+                // Start a new active tower with 0 progress
+                String nextTowerId = UUID.randomUUID().toString();
+                Tower nextTower = new Tower(
+                    nextTowerId,
+                    activeTower.categoryId(),
+                    activeTower.blockTarget(),
+                    0,
+                    null
+                );
+                towerRepository.save(nextTower);
             } else {
                 Tower updatedTower = new Tower(
                     activeTower.id(),
