@@ -1,3 +1,7 @@
-/home/sim/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/DatabaseMigrator.java
-/home/sim/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/SQLiteDataSourceFactory.java
-/home/sim/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/SqliteSettingsRepository.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/DatabaseMigrator.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/SQLiteDataSourceFactory.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/SqliteCategoryRepository.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/SqliteLogRepository.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/SqliteRecordingRepository.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/SqliteSettingsRepository.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/adapter/persistence-sqlite/diar-adapter-persistence-sqlite/src/main/java/dev/diar/adapter/persistence/sqlite/SqliteTowerRepository.java

@@ -1,6 +1,7 @@
 package dev.diar.ui.view;
 
 import dev.diar.app.service.RecordingService;
+import dev.diar.core.model.Recording;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
@@ -11,6 +12,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
+import javax.sound.sampled.*;
+import java.io.File;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class RecordingDialog extends Dialog<ButtonType> {
     private final RecordingService recordingService;
@@ -21,6 +26,10 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private Label timerLabel;
     private Timeline timer;
     private int elapsedSeconds = 0;
+    private ListView<Recording> recordingsList;
+    private Button playButton;
+    private Button stopButton;
+    private Clip currentClip;
 
     public RecordingDialog(RecordingService recordingService) {
         this.recordingService = recordingService;
@@ -56,8 +65,41 @@ public class RecordingDialog extends Dialog<ButtonType> {
             "-fx-background-radius: 5;"
         );
         recordButton.setOnAction(e -> toggleRecording());
+
+        // Recordings section
+        Label recordingsLabel = new Label("Recordings");
+        recordingsLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+
+        recordingsList = new ListView<>();
+        recordingsList.setPrefHeight(180);
+        recordingsList.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Recording item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    String ts = item.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+                    setText(ts + "  •  " + new File(item.filePath()).getName());
+                }
+            }
+        });
+
+        playButton = new Button("▶ Play");
+        playButton.setOnAction(e -> {
+            Recording sel = recordingsList.getSelectionModel().getSelectedItem();
+            if (sel != null) playRecording(sel);
+        });
+
+        stopButton = new Button("⏹ Stop");
+        stopButton.setOnAction(e -> stopPlayback());
+
+        ToolBar playbackBar = new ToolBar(playButton, stopButton);
+
+        loadRecordings();
         
-        content.getChildren().addAll(statusLabel, timerLabel, levelMeter, recordButton);
+        content.getChildren().addAll(statusLabel, timerLabel, levelMeter, recordButton,
+            new Separator(), recordingsLabel, recordingsList, playbackBar);
         
         getDialogPane().setContent(content);
         getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
@@ -69,6 +111,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
             if (timer != null) {
                 timer.stop();
             }
+            stopPlayback();
         });
     }
 
@@ -140,6 +183,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
             
             elapsedSeconds = 0;
             updateTimerLabel();
+            loadRecordings();
             
         } catch (Exception e) {
             showError("Failed to stop recording: " + e.getMessage());
@@ -155,5 +199,38 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
         alert.showAndWait();
+    }
+
+    private void loadRecordings() {
+        try {
+            List<Recording> list = recordingService.getAllRecordings();
+            recordingsList.getItems().setAll(list);
+        } catch (Exception e) {
+            // keep silent in UI; optional toast could be added
+        }
+    }
+
+    private void playRecording(Recording rec) {
+        try {
+            stopPlayback();
+            File wav = new File(rec.filePath());
+            AudioInputStream ais = AudioSystem.getAudioInputStream(wav);
+            currentClip = AudioSystem.getClip();
+            currentClip.open(ais);
+            currentClip.start();
+        } catch (Exception e) {
+            showError("Failed to play recording: " + e.getMessage());
+        }
+    }
+
+    private void stopPlayback() {
+        try {
+            if (currentClip != null) {
+                currentClip.stop();
+                currentClip.close();
+                currentClip = null;
+            }
+        } catch (Exception ignored) {
+        }
     }
 }

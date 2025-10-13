@@ -1,0 +1,45 @@
+# Maven build output
+target/
+**/target/
+
+# Logs
+*.log
+hs_err_pid*
+replay_pid*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+.factorypath
+
+# Local environment
+.env
+.env.*
+
+# Java tooling
+.mtj.tmp/
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Build artifacts (misc)
+*.tar
+*.gz
+*.zip
+*.jar
+*.war
+*.ear
+
+# App data (not in repo)
+# Note: runtime data lives under user home, documented here to avoid accidental commits if linked
+# ~/.diar-e/

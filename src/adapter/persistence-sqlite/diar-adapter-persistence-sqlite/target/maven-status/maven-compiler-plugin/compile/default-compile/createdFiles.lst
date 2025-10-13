@@ -1,3 +1,7 @@
+dev/diar/adapter/persistence/sqlite/SqliteRecordingRepository.class
+dev/diar/adapter/persistence/sqlite/SqliteLogRepository.class
 dev/diar/adapter/persistence/sqlite/SqliteSettingsRepository.class
+dev/diar/adapter/persistence/sqlite/SqliteCategoryRepository.class
+dev/diar/adapter/persistence/sqlite/SqliteTowerRepository.class
 dev/diar/adapter/persistence/sqlite/DatabaseMigrator.class
 dev/diar/adapter/persistence/sqlite/SQLiteDataSourceFactory.class

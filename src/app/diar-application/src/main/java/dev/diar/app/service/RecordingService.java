@@ -46,17 +46,21 @@ public class RecordingService {
     }
 
     public Recording stopRecording(String recordingId) {
-        Path filePath = audioCapturePort.stopRecording();
-        
-        Recording recording = new Recording(
-            recordingId,
-            filePath.toString(),
-            clock.now(),
-            null // Duration will be calculated later if needed
-        );
-        recordingRepository.save(recording);
-        
-        return recording;
+        try {
+            Path filePath = audioCapturePort.stopRecording();
+
+            Recording recording = new Recording(
+                recordingId,
+                filePath.toString(),
+                clock.now(),
+                null // Duration will be calculated later if needed
+            );
+            recordingRepository.save(recording);
+
+            return recording;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to stop recording", e);
+        }
     }
 
     public boolean isRecording() {

@@ -1,1 +1,6 @@
 dev/diar/ui/MainApp.class
+dev/diar/ui/view/RecordingDialog$1.class
+dev/diar/ui/ApplicationContext.class
+dev/diar/ui/view/RecordingDialog.class
+dev/diar/ui/view/CategoryCard.class
+dev/diar/ui/view/MainView.class
