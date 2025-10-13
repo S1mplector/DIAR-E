@@ -129,7 +129,11 @@ public class MainView extends BorderPane {
         TextField nameField = new TextField();
         nameField.setPromptText("Category name (e.g., 'Exercise', 'Reading')");
         
-        Spinner<Integer> targetSpinner = new Spinner<>(5, 100, 10);
+        Spinner<Integer> targetSpinner = new Spinner<>();
+        SpinnerValueFactory.IntegerSpinnerValueFactory valueFactory =
+            new SpinnerValueFactory.IntegerSpinnerValueFactory(5, Integer.MAX_VALUE, 10);
+        targetSpinner.setValueFactory(valueFactory);
+        targetSpinner.setEditable(true);
         
         grid.add(new Label("Name:"), 0, 0);
         grid.add(nameField, 1, 0);
