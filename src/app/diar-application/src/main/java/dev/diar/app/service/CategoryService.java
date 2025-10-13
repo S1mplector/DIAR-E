@@ -22,6 +22,14 @@ public class CategoryService {
             throw new IllegalArgumentException("Tower block target must be positive");
         }
 
+        // Prevent duplicates (case-insensitive)
+        String normalized = name.trim().toLowerCase();
+        boolean exists = categoryRepository.findAll().stream()
+            .anyMatch(c -> c.name().trim().toLowerCase().equals(normalized));
+        if (exists) {
+            throw new IllegalArgumentException("Category with the same name already exists: " + name);
+        }
+
         String id = UUID.randomUUID().toString();
         Category category = new Category(id, name, towerBlockTarget);
         categoryRepository.save(category);

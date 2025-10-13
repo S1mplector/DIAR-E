@@ -11,6 +11,7 @@ public class ApplicationContext {
     private final LogRepository logRepository;
     private final TowerRepository towerRepository;
     private final RecordingRepository recordingRepository;
+    private final SettingsRepository settingsRepository;
     private final AudioCapturePort audioCapturePort;
     private final ClockPort clockPort;
     private final Path recordingsDir;
@@ -18,12 +19,17 @@ public class ApplicationContext {
     private CategoryService categoryService;
     private BlockService blockService;
     private RecordingService recordingService;
+    private EnergyService energyService;
+    private MorningRoutineCoordinator morningRoutineCoordinator;
+    private LogQueryService logQueryService;
+    private StatisticsService statisticsService;
 
     public ApplicationContext(
         CategoryRepository categoryRepository,
         LogRepository logRepository,
         TowerRepository towerRepository,
         RecordingRepository recordingRepository,
+        SettingsRepository settingsRepository,
         AudioCapturePort audioCapturePort,
         ClockPort clockPort,
         Path recordingsDir
@@ -32,6 +38,7 @@ public class ApplicationContext {
         this.logRepository = Objects.requireNonNull(logRepository);
         this.towerRepository = Objects.requireNonNull(towerRepository);
         this.recordingRepository = Objects.requireNonNull(recordingRepository);
+        this.settingsRepository = Objects.requireNonNull(settingsRepository);
         this.audioCapturePort = Objects.requireNonNull(audioCapturePort);
         this.clockPort = Objects.requireNonNull(clockPort);
         this.recordingsDir = Objects.requireNonNull(recordingsDir);
@@ -43,6 +50,15 @@ public class ApplicationContext {
         this.categoryService = new CategoryService(categoryRepository);
         this.blockService = new BlockService(categoryRepository, logRepository, towerRepository, clockPort);
         this.recordingService = new RecordingService(recordingRepository, audioCapturePort, clockPort, recordingsDir);
+        this.energyService = new EnergyService(settingsRepository, clockPort);
+        this.morningRoutineCoordinator = new MorningRoutineCoordinator(
+            settingsRepository,
+            new MorningRoutineService(clockPort),
+            energyService,
+            clockPort
+        );
+        this.logQueryService = new LogQueryService(logRepository, categoryRepository, clockPort);
+        this.statisticsService = new StatisticsService(categoryRepository, logRepository, towerRepository, clockPort);
     }
 
     public CategoryService getCategoryService() {
@@ -55,5 +71,21 @@ public class ApplicationContext {
 
     public RecordingService getRecordingService() {
         return recordingService;
+    }
+
+    public EnergyService getEnergyService() {
+        return energyService;
+    }
+
+    public MorningRoutineCoordinator getMorningRoutineCoordinator() {
+        return morningRoutineCoordinator;
+    }
+
+    public LogQueryService getLogQueryService() {
+        return logQueryService;
+    }
+
+    public StatisticsService getStatisticsService() {
+        return statisticsService;
     }
 }

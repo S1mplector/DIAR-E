@@ -44,6 +44,7 @@ public class Main {
                 logRepository,
                 towerRepository,
                 recordingRepository,
+                settingsRepository,
                 audioCapturePort,
                 clockPort,
                 recordingsDir
