@@ -1,17 +1,31 @@
 package dev.diar.ui;
 
+import dev.diar.ui.view.MainView;
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 public class MainApp extends Application {
+    private static ApplicationContext applicationContext;
+
+    public static void setApplicationContext(ApplicationContext context) {
+        applicationContext = context;
+    }
+
     @Override
     public void start(Stage stage) {
-        BorderPane root = new BorderPane(new Label("DIAR-E: Mood & Achievement Logger"));
-        Scene scene = new Scene(root, 800, 600);
-        stage.setTitle("DIAR-E");
+        if (applicationContext == null) {
+            throw new IllegalStateException("ApplicationContext not set. Call setApplicationContext before launching.");
+        }
+
+        MainView mainView = new MainView(
+            applicationContext.getCategoryService(),
+            applicationContext.getBlockService(),
+            applicationContext.getRecordingService()
+        );
+
+        Scene scene = new Scene(mainView, 900, 700);
+        stage.setTitle("DIAR-E - Daily Achievement Logger");
         stage.setScene(scene);
         stage.show();
     }
