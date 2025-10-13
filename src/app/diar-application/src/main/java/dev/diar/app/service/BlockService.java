@@ -11,6 +11,7 @@ import dev.diar.core.model.Tower;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.Optional;
 
 public class BlockService {
     private final CategoryRepository categoryRepository;
@@ -76,5 +77,12 @@ public class BlockService {
         }
 
         return logId;
+    }
+
+    public Optional<Tower> getActiveTower(String categoryId) {
+        List<Tower> towers = towerRepository.findByCategory(categoryId);
+        return towers.stream()
+            .filter(t -> !t.isCompleted())
+            .findFirst();
     }
 }

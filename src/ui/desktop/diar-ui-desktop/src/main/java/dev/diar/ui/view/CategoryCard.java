@@ -44,6 +44,21 @@ public class CategoryCard extends VBox {
         Label targetLabel = new Label("Tower Target: " + category.towerBlockTarget() + " blocks");
         targetLabel.setFont(Font.font("System", 12));
         targetLabel.setTextFill(Color.web("#d4c4a1"));
+
+        // Progress section
+        int target = category.towerBlockTarget();
+        int completed = blockService.getActiveTower(category.id())
+            .map(t -> t.blocksCompleted())
+            .orElse(0);
+        double progress = target > 0 ? (double) completed / (double) target : 0.0;
+
+        ProgressBar progressBar = new ProgressBar(progress);
+        progressBar.setPrefWidth(400);
+        progressBar.setStyle("-fx-accent: #7a9b8e;");
+
+        Label progressLabel = new Label(completed + " / " + target + " blocks");
+        progressLabel.setTextFill(Color.web("#d4c4a1"));
+        progressLabel.setFont(Font.font("System", 12));
         
         Button addBlockButton = new Button("+ Add Block");
         addBlockButton.setStyle(
@@ -58,7 +73,7 @@ public class CategoryCard extends VBox {
         HBox buttonBox = new HBox(addBlockButton);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
         
-        getChildren().addAll(nameLabel, targetLabel, buttonBox);
+        getChildren().addAll(nameLabel, targetLabel, progressBar, progressLabel, buttonBox);
     }
 
     private void showAddBlockDialog() {
