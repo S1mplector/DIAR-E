@@ -44,4 +44,11 @@ public class CategoryService {
         return categoryRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Category not found: " + id));
     }
+
+    public void deleteCategory(String id) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("Category id cannot be blank");
+        }
+        categoryRepository.delete(id);
+    }
 }

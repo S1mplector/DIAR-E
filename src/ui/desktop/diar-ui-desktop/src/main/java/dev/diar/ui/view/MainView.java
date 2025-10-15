@@ -91,7 +91,7 @@ public class MainView extends BorderPane {
         subtitleLabel.setFont(Font.font("System", FontWeight.NORMAL, 14));
         subtitleLabel.setTextFill(Color.web("#d4c4a1"));
         
-        Button addCategoryButton = new Button("+ New Category");
+        Button addCategoryButton = new Button("Start New Tower");
         styleButton(addCategoryButton, "#7a9b8e");
         addCategoryButton.setOnAction(e -> showAddCategoryDialog());
         
@@ -167,8 +167,8 @@ public class MainView extends BorderPane {
 
     private void showAddCategoryDialog() {
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("New Category");
-        dialog.setHeaderText("Create a new achievement category");
+        dialog.setTitle("Start New Tower");
+        dialog.setHeaderText("Create a new tower/category");
         
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -176,7 +176,7 @@ public class MainView extends BorderPane {
         grid.setPadding(new Insets(20));
         
         TextField nameField = new TextField();
-        nameField.setPromptText("Category name (e.g., 'Exercise', 'Reading')");
+        nameField.setPromptText("Tower name (e.g., 'Exercise', 'Reading')");
         
         Spinner<Integer> targetSpinner = new Spinner<>();
         SpinnerValueFactory.IntegerSpinnerValueFactory valueFactory =
@@ -184,9 +184,9 @@ public class MainView extends BorderPane {
         targetSpinner.setValueFactory(valueFactory);
         targetSpinner.setEditable(true);
         
-        grid.add(new Label("Name:"), 0, 0);
+        grid.add(new Label("Tower Name:"), 0, 0);
         grid.add(nameField, 1, 0);
-        grid.add(new Label("Tower Target:"), 0, 1);
+        grid.add(new Label("Blocks to Complete:"), 0, 1);
         grid.add(targetSpinner, 1, 1);
         
         dialog.getDialogPane().setContent(grid);

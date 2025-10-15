@@ -4,18 +4,33 @@ import dev.diar.app.service.RecordingService;
 import dev.diar.core.model.Recording;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.*;
+import javafx.scene.media.AudioSpectrumListener;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.stage.FileChooser;
 import javafx.util.Duration;
+
 import javax.sound.sampled.*;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.text.DecimalFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 public class RecordingDialog extends Dialog<ButtonType> {
     private final RecordingService recordingService;
@@ -31,6 +46,11 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private Button stopButton;
     private Clip currentClip;
     private Slider volumeSlider;
+    private Canvas waveformCanvas;
+    private Timeline vizTimer;
+    private double[] peaks; // precomputed per-pixel peaks [-1..1]
+    private long clipLengthUs;
+    private int sampleRate = 16000;
 
     public RecordingDialog(RecordingService recordingService) {
         this.recordingService = recordingService;
@@ -104,10 +124,15 @@ public class RecordingDialog extends Dialog<ButtonType> {
 
         ToolBar playbackBar = new ToolBar(playButton, stopButton, new Separator(), volLabel, volumeSlider);
 
+        // Waveform canvas
+        waveformCanvas = new Canvas(420, 100);
+        waveformCanvas.widthProperty().addListener((o, ov, nv) -> renderVisualizer());
+        waveformCanvas.heightProperty().addListener((o, ov, nv) -> renderVisualizer());
+
         loadRecordings();
         
         content.getChildren().addAll(statusLabel, timerLabel, levelMeter, recordButton,
-            new Separator(), recordingsLabel, recordingsList, playbackBar);
+            new Separator(), recordingsLabel, recordingsList, playbackBar, waveformCanvas);
         
         getDialogPane().setContent(content);
         getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
@@ -222,11 +247,14 @@ public class RecordingDialog extends Dialog<ButtonType> {
         try {
             stopPlayback();
             File wav = new File(rec.filePath());
-            AudioInputStream ais = AudioSystem.getAudioInputStream(wav);
+            // Preload waveform data and open a fresh stream for Clip
+            preloadWaveform(wav);
+            AudioInputStream ais2 = AudioSystem.getAudioInputStream(wav);
             currentClip = AudioSystem.getClip();
-            currentClip.open(ais);
+            currentClip.open(ais2);
             applyVolume();
             currentClip.start();
+            startVisualizer();
         } catch (Exception e) {
             showError("Failed to play recording: " + e.getMessage());
         }
@@ -239,6 +267,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 currentClip.close();
                 currentClip = null;
             }
+            stopVisualizer();
         } catch (Exception ignored) {
         }
     }
@@ -263,5 +292,110 @@ public class RecordingDialog extends Dialog<ButtonType> {
             }
         } catch (Exception ignored) {
         }
+    }
+
+    // ===== Waveform visualizer helpers =====
+    private void preloadWaveform(File wav) throws Exception {
+        peaks = null;
+        clipLengthUs = 0L;
+        try (AudioInputStream in0 = AudioSystem.getAudioInputStream(wav)) {
+            AudioFormat base = in0.getFormat();
+            AudioFormat fmt = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                base.getSampleRate(),
+                16,
+                1,
+                2,
+                base.getSampleRate(),
+                false
+            );
+            try (AudioInputStream in = AudioSystem.getAudioInputStream(fmt, in0)) {
+                int sr = (int) fmt.getSampleRate();
+                sampleRate = sr;
+                long frameLength = in.getFrameLength();
+                clipLengthUs = (long) ((frameLength * 1_000_000.0) / fmt.getFrameRate());
+                int totalSamples = (int) Math.min(Integer.MAX_VALUE, frameLength);
+                int bytesToRead = totalSamples * fmt.getFrameSize();
+                byte[] data = in.readNBytes(bytesToRead);
+                int samples = data.length / 2;
+                double[] mono = new double[samples];
+                int idx = 0;
+                for (int i = 0; i < samples; i++) {
+                    int lo = data[idx++] & 0xff;
+                    int hi = data[idx++];
+                    short s = (short) ((hi << 8) | lo);
+                    mono[i] = s / 32768.0;
+                }
+                buildPeaks(mono, 1200);
+            }
+        }
+    }
+
+    private void buildPeaks(double[] mono, int maxBins) {
+        int bins = Math.max(100, Math.min(maxBins, Math.max(1, mono.length / 50)));
+        double[] p = new double[bins];
+        double win = (double) mono.length / bins;
+        for (int i = 0; i < bins; i++) {
+            int start = (int) Math.floor(i * win);
+            int end = (int) Math.min(mono.length, Math.floor((i + 1) * win));
+            double peak = 0.0;
+            for (int j = start; j < end; j++) {
+                double v = Math.abs(mono[j]);
+                if (v > peak) peak = v;
+            }
+            p[i] = peak;
+        }
+        this.peaks = p;
+    }
+
+    private void startVisualizer() {
+        stopVisualizer();
+        vizTimer = new Timeline(new KeyFrame(Duration.millis(33), e -> renderVisualizer()));
+        vizTimer.setCycleCount(Timeline.INDEFINITE);
+        vizTimer.play();
+        if (currentClip != null) {
+            currentClip.addLineListener(ev -> {
+                if (ev.getType() == LineEvent.Type.STOP) {
+                    Platform.runLater(this::stopVisualizer);
+                }
+            });
+        }
+    }
+
+    private void stopVisualizer() {
+        if (vizTimer != null) {
+            vizTimer.stop();
+            vizTimer = null;
+        }
+        renderVisualizer();
+    }
+
+    private void renderVisualizer() {
+        if (waveformCanvas == null) return;
+        GraphicsContext g = waveformCanvas.getGraphicsContext2D();
+        double w = waveformCanvas.getWidth();
+        double h = waveformCanvas.getHeight();
+        g.setFill(Color.web("#2e2e2e"));
+        g.fillRect(0, 0, w, h);
+        if (peaks == null || peaks.length == 0) return;
+
+        int bins = (int) Math.min(peaks.length, Math.max(100, w));
+        double scaleX = (double) peaks.length / bins;
+        double mid = h / 2.0;
+        g.setStroke(Color.web("#7a9b8e"));
+        for (int i = 0; i < bins; i++) {
+            int src = (int) Math.floor(i * scaleX);
+            double v = peaks[src];
+            double mag = v * (h * 0.45);
+            double x = i * (w / bins);
+            g.strokeLine(x, mid - mag, x, mid + mag);
+        }
+
+        double px = 0;
+        if (currentClip != null && clipLengthUs > 0) {
+            px = (currentClip.getMicrosecondPosition() / (double) clipLengthUs) * w;
+        }
+        g.setStroke(Color.web("#f4e4c1"));
+        g.strokeLine(px, 0, px, h);
     }
 }

@@ -22,4 +22,9 @@ public class InMemoryCategoryRepository implements CategoryRepository {
     public List<Category> findAll() {
         return new ArrayList<>(storage.values());
     }
+
+    @Override
+    public void delete(String id) {
+        storage.remove(id);
+    }
 }

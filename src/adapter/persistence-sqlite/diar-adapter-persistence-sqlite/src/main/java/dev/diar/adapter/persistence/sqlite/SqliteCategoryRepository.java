@@ -74,6 +74,18 @@ public class SqliteCategoryRepository implements CategoryRepository {
         }
     }
 
+    @Override
+    public void delete(String id) {
+        String sql = "DELETE FROM categories WHERE id = ?";
+        try (Connection c = dataSource.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, id);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete category", e);
+        }
+    }
+
     private Category mapRow(ResultSet rs) throws Exception {
         return new Category(
             rs.getString("id"),

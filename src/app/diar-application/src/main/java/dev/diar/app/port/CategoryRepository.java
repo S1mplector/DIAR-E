@@ -8,4 +8,5 @@ public interface CategoryRepository {
     void save(Category category);
     Optional<Category> findById(String id);
     List<Category> findAll();
+    void delete(String id);
 }

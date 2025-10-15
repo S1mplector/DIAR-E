@@ -82,8 +82,18 @@ public class CategoryCard extends VBox {
             "-fx-padding: 8 16; " +
             "-fx-background-radius: 5;"
         );
+
+        Button deleteButton = new Button("🧨 Demolish Tower");
+        deleteButton.setOnAction(e -> confirmAndDelete());
+        deleteButton.setStyle(
+            "-fx-background-color: #c74440; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 8 16; " +
+            "-fx-background-radius: 5;"
+        );
         
-        HBox buttonBox = new HBox(10, addBlockButton, viewTowersButton);
+        HBox buttonBox = new HBox(10, addBlockButton, viewTowersButton, deleteButton);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
         
         getChildren().addAll(nameLabel, targetLabel, progressBar, progressLabel, buttonBox);
@@ -123,6 +133,25 @@ public class CategoryCard extends VBox {
                 } catch (Exception e) {
                     Alert error = new Alert(Alert.AlertType.ERROR, "Failed to add block: " + e.getMessage());
                     error.showAndWait();
+                }
+            }
+        });
+    }
+
+    private void confirmAndDelete() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Demolish Tower");
+        confirm.setHeaderText("Demolish '" + category.name() + "'?");
+        confirm.setContentText("This will remove the entire category. This action cannot be undone.");
+        confirm.getButtonTypes().setAll(ButtonType.CANCEL, ButtonType.OK);
+        confirm.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.OK) {
+                try {
+                    applicationContext.getCategoryService().deleteCategory(category.id());
+                    onUpdate.run();
+                } catch (Exception ex) {
+                    Alert err = new Alert(Alert.AlertType.ERROR, "Failed to demolish: " + ex.getMessage());
+                    err.showAndWait();
                 }
             }
         });
