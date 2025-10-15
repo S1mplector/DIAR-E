@@ -6,7 +6,9 @@ import dev.diar.core.model.LogEntry;
 import dev.diar.core.model.Tower;
 import dev.diar.ui.ApplicationContext;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.geometry.Bounds;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -25,6 +27,8 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Locale;
 
 public class TowerGalleryDialog extends Stage {
     private final ApplicationContext context;
@@ -37,6 +41,15 @@ public class TowerGalleryDialog extends Stage {
     private Image blockImage; // cached block image
     private Slider zoomSlider;
     private double blockScale = 0.5; // scale factor applied to block image size
+    private VBox rightPane;
+    private TextField blockFilterField;
+    private ListView<BlockItem> blockListView;
+    private List<BlockItem> currentBlocks = new ArrayList<>();
+    private List<StackPane> blockNodes = new ArrayList<>();
+    private ScrollPane currentScroll;
+    private int highlightedIndex = -1;
+    private Label stageBadge;
+    private ComboBox<String> styleBox;
 
     public TowerGalleryDialog(ApplicationContext context, String categoryId) {
         this.context = context;
@@ -71,10 +84,46 @@ public class TowerGalleryDialog extends Stage {
         });
         towersList.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> renderTower(n));
 
-        // Center: render pane (image or placeholder)
+        // Center Left: render pane (image or placeholder)
         renderPane = new StackPane();
         renderPane.setPrefSize(520, 480);
         renderPane.setStyle("-fx-background-color: #2e2e2e; -fx-border-color: #555; -fx-border-width: 1;");
+        stageBadge = new Label("");
+        stageBadge.setStyle("-fx-background-color: rgba(0,0,0,0.5); -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 6;");
+        StackPane.setAlignment(stageBadge, Pos.TOP_RIGHT);
+        renderPane.getChildren().add(stageBadge);
+
+        // Center Right: block list panel
+        rightPane = new VBox(8);
+        rightPane.setPadding(new Insets(8));
+        Label blocksHdr = new Label("Blocks");
+        blocksHdr.setFont(Font.font("System", 14));
+        blockFilterField = new TextField();
+        blockFilterField.setPromptText("Filter blocks...");
+        blockFilterField.textProperty().addListener((obs, ov, nv) -> applyBlockFilter());
+        blockListView = new ListView<>();
+        blockListView.setPrefWidth(300);
+        blockListView.setCellFactory(lv -> new ListCell<>(){
+            @Override
+            protected void updateItem(BlockItem item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    String ts = item.entry.createdAt().toLocalDateTime().toString().replace('T',' ');
+                    String note = item.entry.note() != null ? item.entry.note() : "";
+                    setText(item.index + ".  " + ts + (note.isEmpty()? "" : (" — " + note)));
+                }
+            }
+        });
+        blockListView.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+            if (n != null) highlightAndScroll(n.index);
+        });
+        rightPane.getChildren().addAll(blocksHdr, blockFilterField, blockListView);
+        rightPane.setPrefWidth(320);
+
+        // Join center as HBox: render left + separator + right list
+        HBox centerBox = new HBox(10, renderPane, new Separator(Orientation.VERTICAL), rightPane);
 
         // Bottom: buttons
         Button viewBlocksBtn = new Button("View Blocks");
@@ -84,15 +133,21 @@ public class TowerGalleryDialog extends Stage {
         zoomSlider = new Slider(0.25, 1.5, blockScale);
         zoomSlider.setPrefWidth(180);
         zoomSlider.valueProperty().addListener((obs, ov, nv) -> { blockScale = nv.doubleValue(); rerenderSelected(); });
+        // Style selector
+        Label styleLbl = new Label("Style");
+        styleBox = new ComboBox<>();
+        styleBox.getItems().addAll("Pyramid", "Ziggurat", "Spire");
+        styleBox.getSelectionModel().select(0);
+        styleBox.valueProperty().addListener((obs, ov, nv) -> rerenderSelected());
         infoLabel = new Label("");
         infoLabel.setTextFill(Color.web("#ddd"));
         infoLabel.setFont(Font.font("System", 12));
-        HBox bottom = new HBox(10, viewBlocksBtn, new Separator(), zoomLbl, zoomSlider, new Separator(), infoLabel);
+        HBox bottom = new HBox(10, viewBlocksBtn, new Separator(), zoomLbl, zoomSlider, new Separator(), styleLbl, styleBox, new Separator(), infoLabel);
         bottom.setAlignment(Pos.CENTER_LEFT);
         bottom.setPadding(new Insets(8, 0, 0, 0));
 
         root.setLeft(towersList);
-        root.setCenter(renderPane);
+        root.setCenter(centerBox);
         root.setBottom(bottom);
 
         Scene scene = new Scene(root, 900, 560);
@@ -113,13 +168,20 @@ public class TowerGalleryDialog extends Stage {
 
     private void renderTower(Tower tower) {
         renderPane.getChildren().clear();
-        if (tower == null) return;
+        renderPane.getChildren().add(stageBadge);
+        if (tower == null) {
+            blockListView.getItems().clear();
+            return;
+        }
         int stage = service.stageForTower(tower);
         infoLabel.setText("Tower: " + tower.blocksCompleted() + "/" + tower.blockTarget() + " (Stage " + stage + ")");
+        stageBadge.setText("Stage " + stage + "/10");
 
         // Procedural rendering: stack blocks bottom-up
         // Load logs for this tower to map block -> log
         List<LogEntry> entries = service.logsForTower(categoryId, tower);
+        currentBlocks.clear();
+        blockNodes.clear();
 
         // Load block image once, from ~/.diar-e/assets/blocks/<categoryId>.png then default.png
         if (blockImage == null) {
@@ -148,16 +210,27 @@ public class TowerGalleryDialog extends Stage {
         int blocksRemaining = completed;
         int cursor = 0; // index into entries
 
-        // choose a base width based on tower size and viewport: 2..6 blocks per row
-        int baseWidth = Math.min(6, Math.max(2, (int)Math.ceil(Math.sqrt(Math.max(1, completed)) )));
+        // choose layout parameters based on style
+        String style = styleBox != null && styleBox.getValue() != null ? styleBox.getValue() : "Pyramid";
+        int baseWidth = Math.min(8, Math.max(2, (int)Math.ceil(Math.sqrt(Math.max(1, completed)) )));
+        int rowsPerWidth;
+        double jitterAmp;
+        switch (style) {
+            case "Ziggurat" -> { rowsPerWidth = 3; jitterAmp = 0; }
+            case "Spire" -> { rowsPerWidth = 1; jitterAmp = (Math.max(32, (blockImage != null ? blockImage.getWidth() : 256) * blockScale)) * 0.08; }
+            default -> { rowsPerWidth = 2; jitterAmp = (Math.max(32, (blockImage != null ? blockImage.getWidth() : 256) * blockScale)) * 0.04; }
+        }
         int currentWidth = baseWidth;
         int rowsAtThisWidth = 0;
-        int rowsPerWidth = 2; // stability: two rows per width before narrowing
+        int rowNo = 0;
 
         while (blocksRemaining > 0) {
             int rowCount = Math.min(currentWidth, blocksRemaining);
             HBox row = new HBox(6);
             row.setAlignment(Pos.CENTER);
+            // lateral jitter per row for more organic feel
+            double offset = jitterAmp * Math.sin(rowNo * 0.9);
+            row.setTranslateX(offset);
 
             for (int i = 0; i < rowCount; i++) {
                 LogEntry entry = entries.get(cursor);
@@ -169,11 +242,20 @@ public class TowerGalleryDialog extends Stage {
                 Tooltip tip = new Tooltip(entry.createdAt().toLocalDateTime().toString().replace('T',' ') +
                         (entry.note() != null ? ("\n" + entry.note()) : ""));
                 Tooltip.install(blockNode, tip);
-                blockNode.setOnMouseClicked(e -> showBlockDialog(blockIndex, entry));
+                final int idxRef = blockIndex;
+                blockNode.setOnMouseClicked(e -> {
+                    showBlockDialog(idxRef, entry);
+                    selectInBlockList(idxRef);
+                });
                 // subtle hover highlight
-                blockNode.setOnMouseEntered(e -> blockNode.setStyle("-fx-effect: dropshadow(gaussian, rgba(255,255,255,0.15), 10, 0.2, 0, 0);"));
+                blockNode.setOnMouseEntered(e -> {
+                    blockNode.setStyle("-fx-effect: dropshadow(gaussian, rgba(255,255,255,0.18), 12, 0.25, 0, 0);");
+                    selectInBlockList(idxRef);
+                });
                 blockNode.setOnMouseExited(e -> blockNode.setStyle(""));
                 row.getChildren().add(blockNode);
+                blockNodes.add(blockNode);
+                currentBlocks.add(new BlockItem(blockIndex, entry));
             }
 
             blockStack.getChildren().add(row);
@@ -183,6 +265,7 @@ public class TowerGalleryDialog extends Stage {
                 currentWidth--;
                 rowsAtThisWidth = 0;
             }
+            rowNo++;
         }
 
         // Ground bar sized relative to current block width
@@ -204,6 +287,11 @@ public class TowerGalleryDialog extends Stage {
         // Scroll to bottom so the base and latest blocks are visible
         sp.layout();
         sp.setVvalue(1.0);
+        currentScroll = sp;
+
+        // Populate right list
+        applyBlockFilter();
+        highlightedIndex = -1;
     }
 
     private void viewBlocks() {
@@ -273,5 +361,56 @@ public class TowerGalleryDialog extends Stage {
         if (sel != null) {
             renderTower(sel);
         }
+    }
+
+    private void applyBlockFilter() {
+        String q = blockFilterField.getText() != null ? blockFilterField.getText().trim().toLowerCase(Locale.ROOT) : "";
+        blockListView.getItems().clear();
+        if (q.isEmpty()) {
+            blockListView.getItems().addAll(currentBlocks);
+        } else {
+            for (BlockItem bi : currentBlocks) {
+                String text = (bi.entry.note() != null ? bi.entry.note() : "");
+                if (text.toLowerCase(Locale.ROOT).contains(q)) {
+                    blockListView.getItems().add(bi);
+                }
+            }
+        }
+    }
+
+    private void selectInBlockList(int index) {
+        for (BlockItem bi : blockListView.getItems()) {
+            if (bi.index == index) {
+                blockListView.getSelectionModel().select(bi);
+                break;
+            }
+        }
+    }
+
+    private void highlightAndScroll(int index) {
+        // clear previous
+        if (highlightedIndex >= 0 && highlightedIndex - 1 < blockNodes.size()) {
+            blockNodes.get(highlightedIndex - 1).setStyle("");
+        }
+        highlightedIndex = index;
+        if (index - 1 >= 0 && index - 1 < blockNodes.size()) {
+            StackPane node = blockNodes.get(index - 1);
+            node.setStyle("-fx-border-color: #f4e4c1; -fx-border-width: 2;");
+            if (currentScroll != null) {
+                double contentHeight = currentScroll.getContent().getBoundsInLocal().getHeight();
+                Bounds nb = node.getBoundsInParent();
+                double y = nb.getMinY();
+                double vh = currentScroll.getViewportBounds().getHeight();
+                double targetV = Math.max(0, Math.min(1, (y - vh * 0.3) / Math.max(1, contentHeight - vh)));
+                currentScroll.setVvalue(targetV);
+            }
+        }
+    }
+
+    private static class BlockItem {
+        final int index;
+        final LogEntry entry;
+        BlockItem(int index, LogEntry entry) { this.index = index; this.entry = entry; }
+        @Override public String toString() { return index + ""; }
     }
 }
