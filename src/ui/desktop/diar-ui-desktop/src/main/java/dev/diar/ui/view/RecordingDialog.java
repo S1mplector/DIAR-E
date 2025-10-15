@@ -30,6 +30,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private Button playButton;
     private Button stopButton;
     private Clip currentClip;
+    private Slider volumeSlider;
 
     public RecordingDialog(RecordingService recordingService) {
         this.recordingService = recordingService;
@@ -94,7 +95,14 @@ public class RecordingDialog extends Dialog<ButtonType> {
         stopButton = new Button("⏹ Stop");
         stopButton.setOnAction(e -> stopPlayback());
 
-        ToolBar playbackBar = new ToolBar(playButton, stopButton);
+        // Volume control
+        Label volLabel = new Label("Volume");
+        volumeSlider = new Slider(0.0, 1.0, 0.8);
+        volumeSlider.setBlockIncrement(0.05);
+        volumeSlider.setPrefWidth(200);
+        volumeSlider.valueProperty().addListener((obs, ov, nv) -> applyVolume());
+
+        ToolBar playbackBar = new ToolBar(playButton, stopButton, new Separator(), volLabel, volumeSlider);
 
         loadRecordings();
         
@@ -217,6 +225,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
             AudioInputStream ais = AudioSystem.getAudioInputStream(wav);
             currentClip = AudioSystem.getClip();
             currentClip.open(ais);
+            applyVolume();
             currentClip.start();
         } catch (Exception e) {
             showError("Failed to play recording: " + e.getMessage());
@@ -229,6 +238,28 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 currentClip.stop();
                 currentClip.close();
                 currentClip = null;
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void applyVolume() {
+        try {
+            if (currentClip == null) return;
+            if (currentClip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                FloatControl gain = (FloatControl) currentClip.getControl(FloatControl.Type.MASTER_GAIN);
+                double vol = volumeSlider != null ? volumeSlider.getValue() : 0.8;
+                // Convert linear [0..1] to dB within control's range
+                float min = gain.getMinimum();
+                float max = gain.getMaximum();
+                float dB;
+                if (vol <= 0.0001) {
+                    dB = min;
+                } else {
+                    float target = (float) (20.0 * Math.log10(vol));
+                    dB = Math.max(min, Math.min(max, target));
+                }
+                gain.setValue(dB);
             }
         } catch (Exception ignored) {
         }

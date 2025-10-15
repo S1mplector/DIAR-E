@@ -8,7 +8,10 @@
 /Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/BlockService.java
 /Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/CategoryService.java
 /Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/EnergyService.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/ExportImportService.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/LogQueryService.java
 /Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/MorningRoutineCoordinator.java
 /Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/MorningRoutineService.java
 /Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/RecordingService.java
+/Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/StatisticsService.java
 /Users/ilgazmehmetoglu/Desktop/Projects/DIAR-E/src/app/diar-application/src/main/java/dev/diar/app/service/SystemClock.java

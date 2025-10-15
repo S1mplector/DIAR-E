@@ -14,7 +14,7 @@ public class EnergyServiceTest {
     void defaultValuesAndSettersClampAndPersist() {
         var settings = new InMemorySettingsRepository();
         var clock = new FakeClock(ZonedDateTime.parse("2025-01-01T08:00:00Z"));
-        var svc = new EnergyService(settings, clock);
+        var svc = new EnergyService(new SettingsService(settings), clock);
 
         assertEquals(100, svc.getLevel());
         assertFalse(svc.isExhausted());
@@ -32,7 +32,7 @@ public class EnergyServiceTest {
     void resetForNewDayResetsState() {
         var settings = new InMemorySettingsRepository();
         var clock = new FakeClock(ZonedDateTime.parse("2025-01-01T08:00:00Z"));
-        var svc = new EnergyService(settings, clock);
+        var svc = new EnergyService(new SettingsService(settings), clock);
 
         svc.setLevel(40);
         svc.setExhausted(true);

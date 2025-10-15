@@ -26,26 +26,29 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
         this.audioData = new ByteArrayOutputStream();
         recording.set(true);
         
+        // Configure and open line synchronously to fail fast (e.g., missing mic permission)
+        try {
+            AudioFormat format = new AudioFormat(16000, 16, 1, true, false);
+            DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
+            if (!AudioSystem.isLineSupported(info)) {
+                throw new RuntimeException("Audio line not supported for 16kHz/16-bit mono");
+            }
+            line = (TargetDataLine) AudioSystem.getLine(info);
+            line.open(format);
+            line.start();
+        } catch (Exception openEx) {
+            recording.set(false);
+            throw new RuntimeException("Failed to access microphone. Check system permissions.", openEx);
+        }
+
         recordingThread = new Thread(() -> {
             try {
-                // Configure audio format: 16kHz, 16 bit, mono
-                AudioFormat format = new AudioFormat(16000, 16, 1, true, false);
-                DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-                
-                if (!AudioSystem.isLineSupported(info)) {
-                    throw new RuntimeException("Audio line not supported");
-                }
-                
-                line = (TargetDataLine) AudioSystem.getLine(info);
-                line.open(format);
-                line.start();
-                
                 byte[] buffer = new byte[4096];
                 while (recording.get()) {
                     int bytesRead = line.read(buffer, 0, buffer.length);
                     if (bytesRead > 0) {
                         audioData.write(buffer, 0, bytesRead);
-                        
+
                         // Calculate audio level for meter callback
                         double level = calculateRMSLevel(buffer, bytesRead);
                         if (levelMeterCallback != null) {
@@ -54,7 +57,8 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                // Surface errors for caller visibility
+                throw new RuntimeException("Audio capture failed", e);
             }
         });
         recordingThread.start();
@@ -79,13 +83,18 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
             }
             
             // Write WAV file
+            AudioFormat format = new AudioFormat(16000, 16, 1, true, false);
+            byte[] data;
             if (audioData != null && audioData.size() > 0) {
-                byte[] data = audioData.toByteArray();
-                AudioFormat format = new AudioFormat(16000, 16, 1, true, false);
-                writeWavFile(currentTarget.toFile(), data, format);
+                data = audioData.toByteArray();
+            } else {
+                // Ensure a minimal file exists to avoid playback errors; write 0.2s of silence
+                int frames = (int) (format.getFrameRate() * 0.2);
+                data = new byte[frames * format.getFrameSize()];
             }
+            writeWavFile(currentTarget.toFile(), data, format);
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to finalize recording", e);
         }
         
         return currentTarget;

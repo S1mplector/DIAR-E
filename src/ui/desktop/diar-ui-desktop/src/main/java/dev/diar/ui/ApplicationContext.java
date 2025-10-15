@@ -23,6 +23,7 @@ public class ApplicationContext {
     private MorningRoutineCoordinator morningRoutineCoordinator;
     private LogQueryService logQueryService;
     private StatisticsService statisticsService;
+    private ExportImportService exportImportService;
 
     public ApplicationContext(
         CategoryRepository categoryRepository,
@@ -50,7 +51,8 @@ public class ApplicationContext {
         this.categoryService = new CategoryService(categoryRepository);
         this.blockService = new BlockService(categoryRepository, logRepository, towerRepository, clockPort);
         this.recordingService = new RecordingService(recordingRepository, audioCapturePort, clockPort, recordingsDir);
-        this.energyService = new EnergyService(settingsRepository, clockPort);
+        SettingsService settingsService = new SettingsService(settingsRepository);
+        this.energyService = new EnergyService(settingsService, clockPort);
         this.morningRoutineCoordinator = new MorningRoutineCoordinator(
             settingsRepository,
             new MorningRoutineService(clockPort),
@@ -59,6 +61,14 @@ public class ApplicationContext {
         );
         this.logQueryService = new LogQueryService(logRepository, categoryRepository, clockPort);
         this.statisticsService = new StatisticsService(categoryRepository, logRepository, towerRepository, clockPort);
+        this.exportImportService = new ExportImportService(
+            categoryRepository,
+            logRepository,
+            towerRepository,
+            recordingRepository,
+            settingsRepository,
+            clockPort
+        );
     }
 
     public CategoryService getCategoryService() {
@@ -87,5 +97,9 @@ public class ApplicationContext {
 
     public StatisticsService getStatisticsService() {
         return statisticsService;
+    }
+
+    public ExportImportService getExportImportService() {
+        return exportImportService;
     }
 }

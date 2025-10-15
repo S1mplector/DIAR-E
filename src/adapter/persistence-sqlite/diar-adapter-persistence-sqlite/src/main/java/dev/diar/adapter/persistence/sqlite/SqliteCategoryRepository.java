@@ -7,6 +7,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +31,12 @@ public class SqliteCategoryRepository implements CategoryRepository {
             ps.setInt(3, category.towerBlockTarget());
             ps.executeUpdate();
         } catch (Exception e) {
+            if (e instanceof SQLException se) {
+                String msg = se.getMessage();
+                if (msg != null && msg.toLowerCase().contains("unique") && msg.toLowerCase().contains("categories")) {
+                    throw new IllegalArgumentException("Category name already exists: " + category.name(), e);
+                }
+            }
             throw new RuntimeException("Failed to save category", e);
         }
     }

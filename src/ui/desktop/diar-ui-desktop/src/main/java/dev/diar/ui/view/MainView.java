@@ -3,6 +3,7 @@ package dev.diar.ui.view;
 import dev.diar.app.service.BlockService;
 import dev.diar.app.service.CategoryService;
 import dev.diar.app.service.RecordingService;
+import dev.diar.ui.ApplicationContext;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -11,19 +12,23 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import javafx.stage.FileChooser;
+import javafx.stage.Window;
 
 public class MainView extends BorderPane {
     private final CategoryService categoryService;
     private final BlockService blockService;
     private final RecordingService recordingService;
+    private final ApplicationContext applicationContext;
     
     private VBox categoryListView;
     private Label statusLabel;
 
-    public MainView(CategoryService categoryService, BlockService blockService, RecordingService recordingService) {
+    public MainView(CategoryService categoryService, BlockService blockService, RecordingService recordingService, ApplicationContext applicationContext) {
         this.categoryService = categoryService;
         this.blockService = blockService;
         this.recordingService = recordingService;
+        this.applicationContext = applicationContext;
         
         setupUI();
         loadCategories();
@@ -33,9 +38,11 @@ public class MainView extends BorderPane {
         // Set WALL-E inspired brown/rusty theme
         setStyle("-fx-background-color: #3a2f27;");
         
-        // Header
-        VBox header = createHeader();
-        setTop(header);
+        // Menu + Header
+        VBox topBox = new VBox();
+        topBox.getChildren().add(createMenuBar());
+        topBox.getChildren().add(createHeader());
+        setTop(topBox);
         
         // Center content
         ScrollPane centerContent = createCenterContent();
@@ -44,6 +51,25 @@ public class MainView extends BorderPane {
         // Bottom status bar
         HBox statusBar = createStatusBar();
         setBottom(statusBar);
+    }
+
+    private MenuBar createMenuBar() {
+        MenuBar menuBar = new MenuBar();
+
+        Menu fileMenu = new Menu("File");
+        MenuItem exportItem = new MenuItem("Export...");
+        exportItem.setOnAction(e -> doExport());
+        MenuItem importItem = new MenuItem("Import...");
+        importItem.setOnAction(e -> doImport());
+        fileMenu.getItems().addAll(exportItem, importItem);
+
+        Menu toolsMenu = new Menu("Tools");
+        MenuItem morningRoutineItem = new MenuItem("Run Morning Routine");
+        morningRoutineItem.setOnAction(e -> doMorningRoutine());
+        toolsMenu.getItems().add(morningRoutineItem);
+
+        menuBar.getMenus().addAll(fileMenu, toolsMenu);
+        return menuBar;
     }
 
     private VBox createHeader() {
@@ -180,5 +206,57 @@ public class MainView extends BorderPane {
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
         alert.showAndWait();
+    }
+
+    private void doExport() {
+        try {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Export Data");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Files", "*.json"));
+            Window w = getScene() != null ? getScene().getWindow() : null;
+            var file = chooser.showSaveDialog(w);
+            if (file != null) {
+                applicationContext.getExportImportService().exportAll(file.toPath());
+                updateStatus("Exported to: " + file.getAbsolutePath());
+            }
+        } catch (Exception ex) {
+            showError("Export failed: " + ex.getMessage());
+        }
+    }
+
+    private void doImport() {
+        try {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Import Data");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Files", "*.json"));
+            Window w = getScene() != null ? getScene().getWindow() : null;
+            var file = chooser.showOpenDialog(w);
+            if (file != null) {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Remap IDs to avoid collisions?", ButtonType.YES, ButtonType.NO, ButtonType.CANCEL);
+                confirm.setHeaderText("Import Options");
+                var res = confirm.showAndWait();
+                if (res.isPresent() && res.get() != ButtonType.CANCEL) {
+                    boolean remap = res.get() == ButtonType.YES;
+                    applicationContext.getExportImportService().importAll(file.toPath(), remap);
+                    loadCategories();
+                    updateStatus("Imported from: " + file.getAbsolutePath());
+                }
+            }
+        } catch (Exception ex) {
+            showError("Import failed: " + ex.getMessage());
+        }
+    }
+
+    private void doMorningRoutine() {
+        try {
+            boolean ran = applicationContext.getMorningRoutineCoordinator().runIfDue();
+            if (ran) {
+                updateStatus("Morning routine completed.");
+            } else {
+                updateStatus("Morning routine not due.");
+            }
+        } catch (Exception ex) {
+            showError("Morning routine failed: " + ex.getMessage());
+        }
     }
 }

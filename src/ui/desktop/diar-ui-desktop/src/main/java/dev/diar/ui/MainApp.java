@@ -21,7 +21,8 @@ public class MainApp extends Application {
         MainView mainView = new MainView(
             applicationContext.getCategoryService(),
             applicationContext.getBlockService(),
-            applicationContext.getRecordingService()
+            applicationContext.getRecordingService(),
+            applicationContext
         );
 
         Scene scene = new Scene(mainView, 900, 700);
