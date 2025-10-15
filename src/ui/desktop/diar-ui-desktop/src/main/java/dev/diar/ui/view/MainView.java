@@ -4,6 +4,8 @@ import dev.diar.app.service.BlockService;
 import dev.diar.app.service.CategoryService;
 import dev.diar.app.service.RecordingService;
 import dev.diar.ui.ApplicationContext;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -14,6 +16,7 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
+import javafx.util.Duration;
 
 public class MainView extends BorderPane {
     private final CategoryService categoryService;
@@ -21,8 +24,10 @@ public class MainView extends BorderPane {
     private final RecordingService recordingService;
     private final ApplicationContext applicationContext;
     
-    private VBox categoryListView;
+    private TilePane categoryGrid;
     private Label statusLabel;
+    private Label energyLabel;
+    private Timeline energyRefreshTimer;
 
     public MainView(CategoryService categoryService, BlockService blockService, RecordingService recordingService, ApplicationContext applicationContext) {
         this.categoryService = categoryService;
@@ -102,11 +107,14 @@ public class MainView extends BorderPane {
     }
 
     private ScrollPane createCenterContent() {
-        categoryListView = new VBox(15);
-        categoryListView.setPadding(new Insets(20));
-        categoryListView.setAlignment(Pos.TOP_CENTER);
-        
-        ScrollPane scrollPane = new ScrollPane(categoryListView);
+        categoryGrid = new TilePane();
+        categoryGrid.setPadding(new Insets(20));
+        categoryGrid.setHgap(16);
+        categoryGrid.setVgap(16);
+        categoryGrid.setPrefColumns(2);
+        categoryGrid.setTileAlignment(Pos.TOP_LEFT);
+
+        ScrollPane scrollPane = new ScrollPane(categoryGrid);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: #3a2f27; -fx-background-color: #3a2f27;");
         
@@ -121,23 +129,38 @@ public class MainView extends BorderPane {
         statusLabel = new Label("Ready");
         statusLabel.setTextFill(Color.web("#d4c4a1"));
         statusLabel.setFont(Font.font("Monospace", 12));
-        
-        statusBar.getChildren().add(statusLabel);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        energyLabel = new Label("");
+        energyLabel.setTextFill(Color.web("#d4c4a1"));
+        energyLabel.setFont(Font.font("Monospace", 12));
+        updateEnergyLabel();
+
+        // periodic refresh
+        energyRefreshTimer = new Timeline(new KeyFrame(Duration.seconds(10), e -> updateEnergyLabel()));
+        energyRefreshTimer.setCycleCount(Timeline.INDEFINITE);
+        energyRefreshTimer.play();
+
+        statusBar.getChildren().addAll(statusLabel, spacer, energyLabel);
         return statusBar;
     }
 
     private void loadCategories() {
-        categoryListView.getChildren().clear();
+        categoryGrid.getChildren().clear();
         
         var categories = categoryService.getAllCategories();
         if (categories.isEmpty()) {
             Label emptyLabel = new Label("No categories yet. Add one to start building towers!");
             emptyLabel.setTextFill(Color.web("#d4c4a1"));
             emptyLabel.setFont(Font.font("System", FontPosture.ITALIC, 14));
-            categoryListView.getChildren().add(emptyLabel);
+            categoryGrid.getChildren().add(emptyLabel);
         } else {
             for (var category : categories) {
-                categoryListView.getChildren().add(new CategoryCard(category, blockService, this::loadCategories));
+                CategoryCard card = new CategoryCard(category, blockService, this::loadCategories, applicationContext);
+                card.setPrefWidth(420);
+                categoryGrid.getChildren().add(card);
             }
         }
     }
@@ -252,11 +275,22 @@ public class MainView extends BorderPane {
             boolean ran = applicationContext.getMorningRoutineCoordinator().runIfDue();
             if (ran) {
                 updateStatus("Morning routine completed.");
+                updateEnergyLabel();
             } else {
                 updateStatus("Morning routine not due.");
             }
         } catch (Exception ex) {
             showError("Morning routine failed: " + ex.getMessage());
+        }
+    }
+
+    private void updateEnergyLabel() {
+        try {
+            int level = applicationContext.getEnergyService().getLevel();
+            boolean exhausted = applicationContext.getEnergyService().isExhausted();
+            energyLabel.setText("Energy: " + level + "%" + (exhausted ? " (exhausted)" : ""));
+        } catch (Exception ignored) {
+            energyLabel.setText("");
         }
     }
 }

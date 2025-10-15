@@ -24,6 +24,7 @@ public class ApplicationContext {
     private LogQueryService logQueryService;
     private StatisticsService statisticsService;
     private ExportImportService exportImportService;
+    private TowerViewService towerViewService;
 
     public ApplicationContext(
         CategoryRepository categoryRepository,
@@ -69,6 +70,7 @@ public class ApplicationContext {
             settingsRepository,
             clockPort
         );
+        this.towerViewService = new TowerViewService(categoryRepository, logRepository, towerRepository, clockPort);
     }
 
     public CategoryService getCategoryService() {
@@ -101,5 +103,9 @@ public class ApplicationContext {
 
     public ExportImportService getExportImportService() {
         return exportImportService;
+    }
+
+    public TowerViewService getTowerViewService() {
+        return towerViewService;
     }
 }

@@ -1,0 +1,45 @@
+:root {
+  /* Colors */
+  --bg: #3a2f27;
+  --bg-alt: #5a4a3a;
+  --status-bg: #2a1f17;
+  --text: #f4e4c1;
+  --text-dim: #d4c4a1;
+  --accent: #7a9b8e;
+  --accent-2: #9b7a8e;
+  --card-border: #7a6a5a;
+}
+
+.root {
+  -fx-background-color: var(--bg);
+}
+
+.label {
+  -fx-text-fill: var(--text);
+}
+
+.button.primary {
+  -fx-background-color: var(--accent);
+  -fx-text-fill: white;
+  -fx-font-weight: bold;
+  -fx-background-radius: 5;
+}
+
+.button.secondary {
+  -fx-background-color: var(--accent-2);
+  -fx-text-fill: white;
+  -fx-font-weight: bold;
+  -fx-background-radius: 5;
+}
+
+.status-bar {
+  -fx-background-color: var(--status-bg);
+}
+
+.card {
+  -fx-background-color: var(--bg-alt);
+  -fx-background-radius: 10;
+  -fx-border-color: var(--card-border);
+  -fx-border-width: 2;
+  -fx-border-radius: 10;
+}

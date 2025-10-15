@@ -2,6 +2,7 @@ package dev.diar.ui.view;
 
 import dev.diar.app.service.BlockService;
 import dev.diar.core.model.Category;
+import dev.diar.ui.ApplicationContext;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -15,11 +16,13 @@ public class CategoryCard extends VBox {
     private final Category category;
     private final BlockService blockService;
     private final Runnable onUpdate;
+    private final ApplicationContext applicationContext;
 
-    public CategoryCard(Category category, BlockService blockService, Runnable onUpdate) {
+    public CategoryCard(Category category, BlockService blockService, Runnable onUpdate, ApplicationContext applicationContext) {
         this.category = category;
         this.blockService = blockService;
         this.onUpdate = onUpdate;
+        this.applicationContext = applicationContext;
         
         setupUI();
     }
@@ -69,8 +72,18 @@ public class CategoryCard extends VBox {
             "-fx-background-radius: 5;"
         );
         addBlockButton.setOnAction(e -> showAddBlockDialog());
+
+        Button viewTowersButton = new Button("🏗 View Towers");
+        viewTowersButton.setOnAction(e -> new TowerGalleryDialog(applicationContext, category.id()).show());
+        viewTowersButton.setStyle(
+            "-fx-background-color: #9b7a8e; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 8 16; " +
+            "-fx-background-radius: 5;"
+        );
         
-        HBox buttonBox = new HBox(addBlockButton);
+        HBox buttonBox = new HBox(10, addBlockButton, viewTowersButton);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
         
         getChildren().addAll(nameLabel, targetLabel, progressBar, progressLabel, buttonBox);

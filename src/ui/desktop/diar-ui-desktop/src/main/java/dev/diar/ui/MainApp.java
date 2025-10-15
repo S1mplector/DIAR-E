@@ -26,6 +26,10 @@ public class MainApp extends Application {
         );
 
         Scene scene = new Scene(mainView, 900, 700);
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) {
+            scene.getStylesheets().add(css);
+        }
         stage.setTitle("DIAR-E - Daily Achievement Logger");
         stage.setScene(scene);
         stage.show();
