@@ -29,6 +29,7 @@ import java.io.File;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.time.format.DateTimeFormatter;
 
 public class TowerGalleryDialog extends Stage {
     private final ApplicationContext context;
@@ -110,9 +111,18 @@ public class TowerGalleryDialog extends Stage {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    String ts = item.entry.createdAt().toLocalDateTime().toString().replace('T',' ');
                     String note = item.entry.note() != null ? item.entry.note() : "";
-                    setText(item.index + ".  " + ts + (note.isEmpty()? "" : (" — " + note)));
+                    String title = "";
+                    if (!note.isEmpty()) {
+                        String[] lines = note.split("\\R");
+                        for (String ln : lines) {
+                            String t = ln.trim();
+                            if (!t.isEmpty()) { title = t; break; }
+                        }
+                    }
+                    if (title.isEmpty()) title = "(untitled)";
+                    String ts = item.entry.createdAt().toLocalDateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+                    setText(item.index + ".  " + title + " — " + ts);
                 }
             }
         });
@@ -183,13 +193,21 @@ public class TowerGalleryDialog extends Stage {
         currentBlocks.clear();
         blockNodes.clear();
 
-        // Load block image once, from ~/.diar-e/assets/blocks/<categoryId>.png then default.png
+        // Load block image once: prefer classpath resource /images/block.png, fallback to ~/.diar-e assets
         if (blockImage == null) {
-            File catBlock = new File(System.getProperty("user.home"), ".diar-e/assets/blocks/" + categoryId + ".png");
-            File defBlock = new File(System.getProperty("user.home"), ".diar-e/assets/blocks/default.png");
-            File chosen = catBlock.exists() ? catBlock : (defBlock.exists() ? defBlock : null);
-            if (chosen != null) {
-                blockImage = new Image(chosen.toURI().toString());
+            try {
+                var res = getClass().getResource("/images/block.png");
+                if (res != null) {
+                    blockImage = new Image(res.toExternalForm());
+                }
+            } catch (Exception ignored) {}
+            if (blockImage == null) {
+                File catBlock = new File(System.getProperty("user.home"), ".diar-e/assets/blocks/" + categoryId + ".png");
+                File defBlock = new File(System.getProperty("user.home"), ".diar-e/assets/blocks/default.png");
+                File chosen = catBlock.exists() ? catBlock : (defBlock.exists() ? defBlock : null);
+                if (chosen != null) {
+                    blockImage = new Image(chosen.toURI().toString());
+                }
             }
         }
 

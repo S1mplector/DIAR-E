@@ -24,4 +24,9 @@ public class InMemoryRecordingRepository implements RecordingRepository {
         list.sort((a,b) -> b.createdAt().compareTo(a.createdAt()));
         return list;
     }
+
+    @Override
+    public void delete(String id) {
+        storage.remove(id);
+    }
 }

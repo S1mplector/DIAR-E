@@ -8,29 +8,20 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.scene.media.AudioSpectrumListener;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.stage.FileChooser;
 import javafx.util.Duration;
 
 import javax.sound.sampled.*;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.text.DecimalFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 public class RecordingDialog extends Dialog<ButtonType> {
     private final RecordingService recordingService;
@@ -43,7 +34,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private int elapsedSeconds = 0;
     private ListView<Recording> recordingsList;
     private Button playButton;
-    private Button stopButton;
+    private Button pauseButton;
     private Clip currentClip;
     private Slider volumeSlider;
     private Canvas waveformCanvas;
@@ -51,6 +42,9 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private double[] peaks; // precomputed per-pixel peaks [-1..1]
     private long clipLengthUs;
     private int sampleRate = 16000;
+    private boolean paused = false;
+    private Image imgPlay, imgPause, imgRecord;
+    private String playingRecordingId;
 
     public RecordingDialog(RecordingService recordingService) {
         this.recordingService = recordingService;
@@ -76,15 +70,17 @@ public class RecordingDialog extends Dialog<ButtonType> {
         levelMeter.setPrefWidth(300);
         levelMeter.setStyle("-fx-accent: #7a9b8e;");
         
-        recordButton = new Button("⏺ Start Recording");
-        recordButton.setStyle(
-            "-fx-background-color: #c74440; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-weight: bold; " +
-            "-fx-font-size: 14; " +
-            "-fx-padding: 10 20; " +
-            "-fx-background-radius: 5;"
-        );
+        // Load icons
+        imgRecord = loadIcon("record.png");
+        imgPlay = loadIcon("play.png");
+        imgPause = loadIcon("pause.png");
+
+        recordButton = new Button(imgRecord != null ? "" : "Record");
+        if (imgRecord != null) recordButton.setGraphic(iconView(imgRecord, 36));
+        recordButton.setTooltip(new Tooltip("Start Recording"));
+        recordButton.setBackground(Background.EMPTY);
+        recordButton.setBorder(Border.EMPTY);
+        recordButton.setStyle("-fx-background-color: transparent; -fx-padding: 0;" );
         recordButton.setOnAction(e -> toggleRecording());
 
         // Recordings section
@@ -99,21 +95,74 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
+                    setContextMenu(null);
                 } else {
                     String ts = item.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
                     setText(ts + "  •  " + new File(item.filePath()).getName());
+                    // Context menu for rename/delete
+                    MenuItem rename = new MenuItem("Rename...");
+                    rename.setOnAction(e -> {
+                        if (playingRecordingId != null && playingRecordingId.equals(item.id())) {
+                            showError("Stop playback before renaming this recording.");
+                            return;
+                        }
+                        String currentName = new File(item.filePath()).getName();
+                        String base = currentName.toLowerCase().endsWith(".wav") ? currentName.substring(0, currentName.length()-4) : currentName;
+                        TextInputDialog td = new TextInputDialog(base);
+                        td.setTitle("Rename Recording");
+                        td.setHeaderText("Enter a new name for the recording (will save as .wav)");
+                        td.showAndWait().ifPresent(newName -> {
+                            if (newName != null && !newName.trim().isBlank()) {
+                                try {
+                                    recordingService.renameRecording(item.id(), newName.trim());
+                                    loadRecordings();
+                                } catch (Exception ex) {
+                                    showError("Rename failed: " + ex.getMessage());
+                                }
+                            }
+                        });
+                    });
+                    MenuItem del = new MenuItem("Delete...");
+                    del.setOnAction(e -> {
+                        if (playingRecordingId != null && playingRecordingId.equals(item.id())) {
+                            stopPlayback();
+                        }
+                        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Delete this recording?", ButtonType.OK, ButtonType.CANCEL);
+                        confirm.setHeaderText("Confirm Delete");
+                        confirm.showAndWait().ifPresent(btn -> {
+                            if (btn == ButtonType.OK) {
+                                try {
+                                    recordingService.deleteRecording(item.id());
+                                    loadRecordings();
+                                } catch (Exception ex) {
+                                    showError("Delete failed: " + ex.getMessage());
+                                }
+                            }
+                        });
+                    });
+                    ContextMenu cm = new ContextMenu(rename, del);
+                    setContextMenu(cm);
                 }
             }
         });
 
-        playButton = new Button("▶ Play");
+        playButton = new Button(imgPlay != null ? "" : "Play");
+        if (imgPlay != null) playButton.setGraphic(iconView(imgPlay, 36));
+        playButton.setTooltip(new Tooltip("Play selected"));
+        playButton.setBackground(Background.EMPTY);
+        playButton.setBorder(Border.EMPTY);
+        playButton.setStyle("-fx-background-color: transparent; -fx-padding: 0;");
         playButton.setOnAction(e -> {
             Recording sel = recordingsList.getSelectionModel().getSelectedItem();
             if (sel != null) playRecording(sel);
         });
 
-        stopButton = new Button("⏹ Stop");
-        stopButton.setOnAction(e -> stopPlayback());
+        pauseButton = new Button();
+        updatePauseButtonIcon();
+        pauseButton.setBackground(Background.EMPTY);
+        pauseButton.setBorder(Border.EMPTY);
+        pauseButton.setStyle("-fx-background-color: transparent; -fx-padding: 0;");
+        pauseButton.setOnAction(e -> togglePause());
 
         // Volume control
         Label volLabel = new Label("Volume");
@@ -122,7 +171,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
         volumeSlider.setPrefWidth(200);
         volumeSlider.valueProperty().addListener((obs, ov, nv) -> applyVolume());
 
-        ToolBar playbackBar = new ToolBar(playButton, stopButton, new Separator(), volLabel, volumeSlider);
+        ToolBar playbackBar = new ToolBar(playButton, pauseButton, new Separator(), volLabel, volumeSlider);
 
         // Waveform canvas
         waveformCanvas = new Canvas(420, 100);
@@ -137,7 +186,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
         getDialogPane().setContent(content);
         getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         
-        setOnCloseRequest(e -> {
+        this.setOnCloseRequest(e -> {
             if (recordingService.isRecording()) {
                 stopRecording();
             }
@@ -164,15 +213,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
             
             statusLabel.setText("Recording... 🎤");
             statusLabel.setTextFill(Color.RED);
-            recordButton.setText("⏹ Stop Recording");
-            recordButton.setStyle(
-                "-fx-background-color: #5a5a5a; " +
-                "-fx-text-fill: white; " +
-                "-fx-font-weight: bold; " +
-                "-fx-font-size: 14; " +
-                "-fx-padding: 10 20; " +
-                "-fx-background-radius: 5;"
-            );
+            recordButton.setTooltip(new Tooltip("Stop Recording"));
             
             elapsedSeconds = 0;
             timer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -197,15 +238,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
             
             statusLabel.setText("Recording saved!");
             statusLabel.setTextFill(Color.GREEN);
-            recordButton.setText("⏺ Start Recording");
-            recordButton.setStyle(
-                "-fx-background-color: #c74440; " +
-                "-fx-text-fill: white; " +
-                "-fx-font-weight: bold; " +
-                "-fx-font-size: 14; " +
-                "-fx-padding: 10 20; " +
-                "-fx-background-radius: 5;"
-            );
+            recordButton.setTooltip(new Tooltip("Start Recording"));
             levelMeter.setProgress(0);
             
             Alert success = new Alert(Alert.AlertType.INFORMATION);
@@ -254,6 +287,9 @@ public class RecordingDialog extends Dialog<ButtonType> {
             currentClip.open(ais2);
             applyVolume();
             currentClip.start();
+            paused = false;
+            updatePauseButtonIcon();
+            playingRecordingId = rec.id();
             startVisualizer();
         } catch (Exception e) {
             showError("Failed to play recording: " + e.getMessage());
@@ -268,6 +304,9 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 currentClip = null;
             }
             stopVisualizer();
+            paused = false;
+            updatePauseButtonIcon();
+            playingRecordingId = null;
         } catch (Exception ignored) {
         }
     }
@@ -397,5 +436,50 @@ public class RecordingDialog extends Dialog<ButtonType> {
         }
         g.setStroke(Color.web("#f4e4c1"));
         g.strokeLine(px, 0, px, h);
+    }
+
+    private void togglePause() {
+        try {
+            if (currentClip == null) return;
+            if (paused) {
+                currentClip.start();
+                paused = false;
+                updatePauseButtonIcon();
+                startVisualizer();
+            } else {
+                currentClip.stop();
+                paused = true;
+                updatePauseButtonIcon();
+            }
+        } catch (Exception ignored) { }
+    }
+
+    private void updatePauseButtonIcon() {
+        if (pauseButton == null) return;
+        if (paused) {
+            if (imgPlay != null) pauseButton.setGraphic(iconView(imgPlay));
+            pauseButton.setTooltip(new Tooltip("Resume"));
+        } else {
+            if (imgPause != null) pauseButton.setGraphic(iconView(imgPause));
+            pauseButton.setTooltip(new Tooltip("Pause"));
+        }
+    }
+
+    private Image loadIcon(String name) {
+        try {
+            var r = getClass().getResource("/images/" + name);
+            return r != null ? new Image(r.toExternalForm()) : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private ImageView iconView(Image img) { return iconView(img, 16); }
+    private ImageView iconView(Image img, int size) {
+        ImageView iv = new ImageView(img);
+        iv.setFitWidth(size);
+        iv.setFitHeight(size);
+        iv.setPreserveRatio(true);
+        return iv;
     }
 }

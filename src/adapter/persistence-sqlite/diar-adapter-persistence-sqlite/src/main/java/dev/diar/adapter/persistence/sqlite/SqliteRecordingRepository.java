@@ -26,7 +26,7 @@ public class SqliteRecordingRepository implements RecordingRepository {
     @Override
     public void save(Recording recording) {
         String sql = "INSERT INTO recordings(id, file_path, created_at, duration_seconds) VALUES(?, ?, ?, ?) " +
-                     "ON CONFLICT(id) DO UPDATE SET duration_seconds=excluded.duration_seconds";
+                     "ON CONFLICT(id) DO UPDATE SET file_path=excluded.file_path, created_at=excluded.created_at, duration_seconds=excluded.duration_seconds";
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, recording.id());
@@ -73,6 +73,18 @@ public class SqliteRecordingRepository implements RecordingRepository {
             return result;
         } catch (Exception e) {
             throw new RuntimeException("Failed to find all recordings", e);
+        }
+    }
+
+    @Override
+    public void delete(String id) {
+        String sql = "DELETE FROM recordings WHERE id = ?";
+        try (Connection c = dataSource.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, id);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete recording", e);
         }
     }
 

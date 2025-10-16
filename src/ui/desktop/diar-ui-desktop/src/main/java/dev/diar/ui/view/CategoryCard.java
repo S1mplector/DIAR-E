@@ -6,6 +6,7 @@ import dev.diar.ui.ApplicationContext;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -103,26 +104,62 @@ public class CategoryCard extends VBox {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Add Block");
         dialog.setHeaderText("Add a block to " + category.name());
-        
-        VBox content = new VBox(10);
-        content.setPadding(new Insets(20));
-        
-        Label label = new Label("Note (optional):");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
+
+        TextField titleField = new TextField();
+
         TextArea noteArea = new TextArea();
-        noteArea.setPromptText("What did you achieve?");
-        noteArea.setPrefRowCount(3);
+        noteArea.setPrefRowCount(4);
         noteArea.setWrapText(true);
-        
-        content.getChildren().addAll(label, noteArea);
-        
-        dialog.getDialogPane().setContent(content);
+
+        TextField tagsField = new TextField();
+
+        grid.add(new Label("Title:"), 0, 0);
+        grid.add(titleField, 1, 0);
+        grid.add(new Label("Tags:"), 0, 1);
+        grid.add(tagsField, 1, 1);
+        grid.add(new Label("Note:"), 0, 2);
+        grid.add(noteArea, 1, 2);
+
+        dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
                 try {
-                    String note = noteArea.getText().trim();
-                    blockService.addBlock(category.id(), note.isEmpty() ? null : note);
+                    String title = titleField.getText().trim();
+                    String body = noteArea.getText().trim();
+                    StringBuilder sb = new StringBuilder();
+                    if (!title.isEmpty()) sb.append(title);
+                    String head = sb.toString().trim();
+                    // metadata line (tags only)
+                    StringBuilder meta = new StringBuilder();
+                    String tagsRaw = tagsField.getText() != null ? tagsField.getText().trim() : "";
+                    if (!tagsRaw.isEmpty()) {
+                        String[] parts = tagsRaw.split("[,\n\r\t ]+");
+                        for (String p : parts) {
+                            if (p.isBlank()) continue;
+                            if (meta.length() > 0) meta.append(' ');
+                            if (p.startsWith("#")) meta.append(p);
+                            else meta.append('#').append(p);
+                        }
+                    }
+                    String metaLine = meta.toString();
+                    String finalNote;
+                    if (!body.isEmpty()) {
+                        finalNote = head.isEmpty() ? body : head + "\n\n" + body;
+                        if (!metaLine.isEmpty()) finalNote = finalNote + "\n\n" + metaLine;
+                    } else {
+                        if (head.isEmpty() && metaLine.isEmpty()) finalNote = null;
+                        else if (head.isEmpty()) finalNote = metaLine;
+                        else if (metaLine.isEmpty()) finalNote = head;
+                        else finalNote = head + "\n\n" + metaLine;
+                    }
+                    blockService.addBlock(category.id(), finalNote);
                     onUpdate.run();
                     
                     Alert success = new Alert(Alert.AlertType.INFORMATION);

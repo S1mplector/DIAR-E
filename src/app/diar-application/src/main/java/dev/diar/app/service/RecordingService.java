@@ -7,6 +7,7 @@ import dev.diar.core.model.Recording;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -84,5 +85,47 @@ public class RecordingService {
 
     public List<Recording> getAllRecordings() {
         return recordingRepository.findAll();
+    }
+
+    public void deleteRecording(String recordingId) {
+        try {
+            var recOpt = recordingRepository.findById(recordingId);
+            recOpt.ifPresent(r -> {
+                try {
+                    Path p = Path.of(r.filePath());
+                    if (Files.exists(p)) Files.delete(p);
+                } catch (Exception ignored) {}
+            });
+            recordingRepository.delete(recordingId);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete recording", e);
+        }
+    }
+
+    public Recording renameRecording(String recordingId, String newBaseName) {
+        try {
+            if (newBaseName == null || newBaseName.isBlank()) {
+                throw new IllegalArgumentException("New name cannot be blank");
+            }
+            var rec = recordingRepository.findById(recordingId)
+                .orElseThrow(() -> new IllegalArgumentException("Recording not found: " + recordingId));
+            Path oldPath = Path.of(rec.filePath());
+            Path parent = oldPath.getParent();
+            if (parent == null) parent = recordingsDir; // fallback
+            String safe = newBaseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            if (!safe.toLowerCase().endsWith(".wav")) safe = safe + ".wav";
+            Path newPath = parent.resolve(safe);
+            if (Files.exists(newPath)) {
+                throw new IllegalArgumentException("A file with that name already exists");
+            }
+            Files.move(oldPath, newPath, StandardCopyOption.ATOMIC_MOVE);
+            Recording updated = new Recording(rec.id(), newPath.toString(), rec.createdAt(), rec.durationSeconds());
+            recordingRepository.save(updated);
+            return updated;
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to rename recording", e);
+        }
     }
 }

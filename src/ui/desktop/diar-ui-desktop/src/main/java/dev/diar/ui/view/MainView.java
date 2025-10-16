@@ -73,7 +73,12 @@ public class MainView extends BorderPane {
         morningRoutineItem.setOnAction(e -> doMorningRoutine());
         toolsMenu.getItems().add(morningRoutineItem);
 
-        menuBar.getMenus().addAll(fileMenu, toolsMenu);
+        Menu settingsMenu = new Menu("Settings");
+        MenuItem storageItem = new MenuItem("Storage...");
+        storageItem.setOnAction(e -> new SettingsDialog(applicationContext).showAndWait());
+        settingsMenu.getItems().add(storageItem);
+
+        menuBar.getMenus().addAll(fileMenu, toolsMenu, settingsMenu);
         return menuBar;
     }
 
