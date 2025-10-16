@@ -12,6 +12,16 @@
 
 .root {
   -fx-background-color: var(--bg);
+  -fx-background-color: #3a2f27;
+  /* Global focus/selection theme */
+  -fx-accent: #FFC107; /* affects generic accent + selection in many controls */
+  -fx-focus-color: #FFC107; /* focus ring */
+  -fx-faint-focus-color: rgba(255, 193, 7, 0.20);
+  -fx-selection-bar: #FFC107; /* selection background in tables/lists when focused */
+  -fx-selection-bar-text: #3a2f27; /* selection text color */
+  -fx-selection-bar-non-focused: #E0B000; /* selection when control not focused */
+  -fx-highlight-fill: #FFC107; /* text selection */
+  -fx-highlight-text-fill: #3a2f27;
 }
 
 .label {
@@ -20,26 +30,225 @@
 
 .button.primary {
   -fx-background-color: var(--accent);
-  -fx-text-fill: white;
+  -fx-background-color: #7a9b8e;
+  -fx-text-fill: var(--text);
+  -fx-text-fill: #f4e4c1;
   -fx-font-weight: bold;
   -fx-background-radius: 5;
 }
 
 .button.secondary {
   -fx-background-color: var(--accent-2);
-  -fx-text-fill: white;
+  -fx-background-color: #9b7a8e;
+  -fx-text-fill: var(--text);
+  -fx-text-fill: #f4e4c1;
   -fx-font-weight: bold;
   -fx-background-radius: 5;
 }
 
 .status-bar {
   -fx-background-color: var(--status-bg);
+  -fx-background-color: #2a1f17;
 }
 
 .card {
   -fx-background-color: var(--bg-alt);
+  -fx-background-color: #5a4a3a;
   -fx-background-radius: 10;
   -fx-border-color: var(--card-border);
+  -fx-border-color: #7a6a5a;
   -fx-border-width: 2;
   -fx-border-radius: 10;
+}
+
+/* Dialogs and Alerts */
+.dialog-pane {
+  -fx-background-color: var(--bg);
+  -fx-background-color: #3a2f27;
+}
+.dialog-pane .header-panel {
+  -fx-background-color: var(--bg-alt);
+  -fx-background-color: #5a4a3a;
+}
+.dialog-pane .label {
+  -fx-text-fill: var(--text-dim);
+  -fx-text-fill: #d4c4a1;
+}
+.dialog-pane .button {
+  -fx-background-color: var(--accent);
+  -fx-background-color: #7a9b8e;
+  -fx-text-fill: var(--text);
+  -fx-text-fill: #f4e4c1;
+  -fx-font-weight: bold;
+}
+.dialog-pane .button:default {
+  -fx-background-color: var(--accent-2);
+  -fx-background-color: #9b7a8e;
+}
+
+/* Inputs */
+.text-field, .text-area, .password-field, .combo-box-base, .spinner, .choice-box {
+  -fx-background-color: var(--bg-alt);
+  -fx-background-color: #5a4a3a;
+  -fx-control-inner-background: #2e2e2e;
+  -fx-text-fill: var(--text);
+  -fx-text-fill: #f4e4c1;
+  -fx-prompt-text-fill: derive(var(--text-dim), -30%);
+}
+.text-area .content {
+  -fx-background-color: #2e2e2e;
+}
+
+/* Lists */
+.list-view {
+  -fx-background-color: var(--bg);
+  -fx-background-color: #3a2f27;
+}
+.list-cell {
+  -fx-background-color: var(--bg);
+  -fx-background-color: #3a2f27;
+  -fx-text-fill: var(--text);
+  -fx-text-fill: #f4e4c1;
+}
+.list-cell:filled:selected, .list-cell:filled:selected:hover {
+  -fx-background-color: #FFC107;
+  -fx-text-fill: #3a2f27;
+}
+.list-view:focused .list-cell:filled:selected {
+  -fx-background-color: #FFC107;
+  -fx-text-fill: #3a2f27;
+}
+.list-cell:hover {
+  -fx-background-color: #42372f;
+}
+
+/* ScrollPane */
+.scroll-pane, .scroll-pane .viewport {
+  -fx-background-color: transparent;
+}
+.scroll-pane .corner {
+  -fx-background-color: #3a2f27;
+}
+
+/* ScrollBars */
+.scroll-bar:vertical, .scroll-bar:horizontal {
+  -fx-background-color: #3a2f27;
+}
+.scroll-bar .track {
+  -fx-background-color: #3a2f27;
+}
+.scroll-bar .thumb {
+  -fx-background-color: #7a6a5a;
+  -fx-background-radius: 6;
+}
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+  -fx-background-color: #3a2f27;
+}
+
+/* Menus */
+.menu-bar {
+  -fx-background-color: var(--bg-alt);
+  -fx-background-color: #5a4a3a;
+}
+.context-menu {
+  -fx-background-color: var(--bg-alt);
+  -fx-background-color: #5a4a3a;
+  -fx-text-fill: var(--text);
+  -fx-text-fill: #f4e4c1;
+}
+.menu-item .label {
+  -fx-text-fill: var(--text);
+  -fx-text-fill: #f4e4c1;
+}
+
+/* ComboBox popup & cells */
+.combo-box-popup .list-view {
+  -fx-background-color: #3a2f27;
+}
+.combo-box-popup .list-cell {
+  -fx-background-color: #3a2f27;
+  -fx-text-fill: #f4e4c1;
+}
+.combo-box-popup .list-cell:filled:selected, .combo-box-popup .list-cell:filled:selected:hover {
+  -fx-background-color: #FFC107;
+  -fx-text-fill: #3a2f27;
+}
+
+/* Tables */
+.table-view .column-header-background {
+  -fx-background-color: #5a4a3a;
+}
+.table-view .table-row-cell:selected, .table-view:focused .table-row-cell:selected {
+  -fx-background-color: #FFC107;
+  -fx-text-fill: #3a2f27;
+}
+
+/* Trees */
+.tree-view .tree-cell:filled:selected, .tree-view:focused .tree-cell:filled:selected,
+.tree-table-view .tree-table-row-cell:selected, .tree-table-view:focused .tree-table-row-cell:selected {
+  -fx-background-color: #FFC107;
+  -fx-text-fill: #3a2f27;
+}
+
+/* Menus */
+.menu-item:focused {
+  -fx-background-color: #FFC107;
+}
+.menu-item:focused .label {
+  -fx-text-fill: #3a2f27;
+}
+
+/* ToolBar */
+.tool-bar {
+  -fx-background-color: var(--bg-alt);
+  -fx-background-color: #5a4a3a;
+}
+
+/* Tooltip */
+.tooltip {
+  -fx-background-color: var(--bg-alt);
+  -fx-background-color: #5a4a3a;
+  -fx-text-fill: var(--text);
+  -fx-text-fill: #f4e4c1;
+  -fx-background-radius: 6;
+}
+
+/* Separator */
+.separator *.line {
+  -fx-background-color: var(--card-border);
+}
+
+/* Slider */
+.slider .track {
+  -fx-background-color: #42372f;
+}
+.slider .thumb {
+  -fx-background-color: #7a9b8e;
+}
+
+/* Cassette-style icon buttons */
+.cassette-btn {
+  -fx-background-color: transparent;
+  -fx-padding: 0;
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 10, 0.3, 0, 3);
+  -fx-cursor: hand;
+}
+.cassette-btn:armed, .cassette-btn:pressed {
+  -fx-effect: innershadow(gaussian, rgba(0,0,0,0.85), 12, 0.4, 0, 2);
+  -fx-scale-x: 0.9;
+  -fx-scale-y: 0.9;
+  -fx-translate-y: 4;
+  -fx-opacity: 0.92;
+}
+
+/* Apply effect to the icon graphic too */
+.cassette-btn .cassette-icon, .cassette-btn .image-view {
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 10, 0.25, 0, 2);
+}
+.cassette-btn:armed .cassette-icon, .cassette-btn:pressed .cassette-icon,
+.cassette-btn:armed .image-view, .cassette-btn:pressed .image-view {
+  -fx-scale-x: 0.9;
+  -fx-scale-y: 0.9;
+  -fx-translate-y: 4;
+  -fx-effect: innershadow(gaussian, rgba(0,0,0,0.85), 10, 0.35, 0, 1);
 }

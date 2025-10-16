@@ -88,6 +88,8 @@ public class SettingsDialog extends Stage {
         root.getChildren().addAll(header, grid, actions);
 
         Scene scene = new Scene(root, 640, 520);
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) scene.getStylesheets().add(css);
         root.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #d4c4a1;");
         scene.getRoot().setStyle("-fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1;");
         setScene(scene);
@@ -97,7 +99,7 @@ public class SettingsDialog extends Stage {
         Label label = new Label(name);
         label.setStyle("-fx-text-fill: #d4c4a1;");
         Label value = new Label("");
-        value.setStyle("-fx-text-fill: #ffffff;");
+        value.setStyle("-fx-text-fill: #f4e4c1;");
         grid.add(label, 0, row);
         grid.add(value, 1, row);
         return value;

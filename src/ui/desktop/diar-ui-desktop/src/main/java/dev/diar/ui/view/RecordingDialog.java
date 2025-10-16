@@ -16,6 +16,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
 
 import javax.sound.sampled.*;
@@ -45,6 +46,9 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private boolean paused = false;
     private Image imgPlay, imgPause, imgRecord;
     private String playingRecordingId;
+    private String cssUrl;
+    private Canvas spectrumCanvas;
+    private volatile float[] spectrumBins;
 
     public RecordingDialog(RecordingService recordingService) {
         this.recordingService = recordingService;
@@ -54,21 +58,29 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private void setupUI() {
         setTitle("Audio Diary");
         setHeaderText("Record your thoughts and reflections");
+        cssUrl = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
         
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
         content.setAlignment(Pos.CENTER);
         content.setPrefWidth(400);
+        content.setStyle("-fx-background-color: #3a2f27;");
         
         statusLabel = new Label("Ready to record");
         statusLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+        statusLabel.setTextFill(Color.web("#f4e4c1"));
         
         timerLabel = new Label("00:00");
         timerLabel.setFont(Font.font("Monospace", FontWeight.BOLD, 24));
+        timerLabel.setTextFill(Color.web("#f4e4c1"));
         
         levelMeter = new ProgressBar(0);
         levelMeter.setPrefWidth(300);
         levelMeter.setStyle("-fx-accent: #7a9b8e;");
+
+        // Live spectrum (shown during recording)
+        spectrumCanvas = new Canvas(420, 120);
+        spectrumCanvas.setVisible(false);
         
         // Load icons
         imgRecord = loadIcon("record.png");
@@ -81,13 +93,17 @@ public class RecordingDialog extends Dialog<ButtonType> {
         recordButton.setBackground(Background.EMPTY);
         recordButton.setBorder(Border.EMPTY);
         recordButton.setStyle("-fx-background-color: transparent; -fx-padding: 0;" );
+        recordButton.getStyleClass().add("cassette-btn");
+        installPressAnimation(recordButton);
         recordButton.setOnAction(e -> toggleRecording());
 
         // Recordings section
         Label recordingsLabel = new Label("Recordings");
         recordingsLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+        recordingsLabel.setTextFill(Color.web("#f4e4c1"));
 
         recordingsList = new ListView<>();
+        recordingsList.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1;");
         recordingsList.setPrefHeight(180);
         recordingsList.setCellFactory(lv -> new ListCell<>() {
             @Override
@@ -111,6 +127,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
                         TextInputDialog td = new TextInputDialog(base);
                         td.setTitle("Rename Recording");
                         td.setHeaderText("Enter a new name for the recording (will save as .wav)");
+                        if (cssUrl != null) td.getDialogPane().getStylesheets().add(cssUrl);
                         td.showAndWait().ifPresent(newName -> {
                             if (newName != null && !newName.trim().isBlank()) {
                                 try {
@@ -129,6 +146,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
                         }
                         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Delete this recording?", ButtonType.OK, ButtonType.CANCEL);
                         confirm.setHeaderText("Confirm Delete");
+                        if (cssUrl != null) confirm.getDialogPane().getStylesheets().add(cssUrl);
                         confirm.showAndWait().ifPresent(btn -> {
                             if (btn == ButtonType.OK) {
                                 try {
@@ -152,9 +170,20 @@ public class RecordingDialog extends Dialog<ButtonType> {
         playButton.setBackground(Background.EMPTY);
         playButton.setBorder(Border.EMPTY);
         playButton.setStyle("-fx-background-color: transparent; -fx-padding: 0;");
+        playButton.getStyleClass().add("cassette-btn");
+        installPressAnimation(playButton);
         playButton.setOnAction(e -> {
             Recording sel = recordingsList.getSelectionModel().getSelectedItem();
-            if (sel != null) playRecording(sel);
+            if (paused && currentClip != null) {
+                try {
+                    currentClip.start();
+                    paused = false;
+                    updatePauseButtonIcon();
+                    startVisualizer();
+                } catch (Exception ignored) { }
+            } else if (sel != null) {
+                playRecording(sel);
+            }
         });
 
         pauseButton = new Button();
@@ -162,16 +191,20 @@ public class RecordingDialog extends Dialog<ButtonType> {
         pauseButton.setBackground(Background.EMPTY);
         pauseButton.setBorder(Border.EMPTY);
         pauseButton.setStyle("-fx-background-color: transparent; -fx-padding: 0;");
+        pauseButton.getStyleClass().add("cassette-btn");
+        installPressAnimation(pauseButton);
         pauseButton.setOnAction(e -> togglePause());
 
         // Volume control
         Label volLabel = new Label("Volume");
+        volLabel.setTextFill(Color.web("#f4e4c1"));
         volumeSlider = new Slider(0.0, 1.0, 0.8);
         volumeSlider.setBlockIncrement(0.05);
         volumeSlider.setPrefWidth(200);
         volumeSlider.valueProperty().addListener((obs, ov, nv) -> applyVolume());
 
         ToolBar playbackBar = new ToolBar(playButton, pauseButton, new Separator(), volLabel, volumeSlider);
+        playbackBar.setStyle("-fx-background-color: #3a2f27;");
 
         // Waveform canvas
         waveformCanvas = new Canvas(420, 100);
@@ -180,10 +213,11 @@ public class RecordingDialog extends Dialog<ButtonType> {
 
         loadRecordings();
         
-        content.getChildren().addAll(statusLabel, timerLabel, levelMeter, recordButton,
-            new Separator(), recordingsLabel, recordingsList, playbackBar, waveformCanvas);
+        content.getChildren().addAll(statusLabel, timerLabel, levelMeter, spectrumCanvas, recordButton,
+            recordingsLabel, recordingsList, playbackBar, waveformCanvas);
         
         getDialogPane().setContent(content);
+        if (cssUrl != null) getDialogPane().getStylesheets().add(cssUrl);
         getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         
         this.setOnCloseRequest(e -> {
@@ -207,13 +241,19 @@ public class RecordingDialog extends Dialog<ButtonType> {
 
     private void startRecording() {
         try {
-            currentRecordingId = recordingService.startRecording(level -> {
+            currentRecordingId = recordingService.startRecordingWithSpectrum(level -> {
                 javafx.application.Platform.runLater(() -> levelMeter.setProgress(level));
+            }, bins -> {
+                // called from capture thread
+                this.spectrumBins = bins;
+                Platform.runLater(this::renderSpectrum);
             });
             
             statusLabel.setText("Recording... 🎤");
             statusLabel.setTextFill(Color.RED);
             recordButton.setTooltip(new Tooltip("Stop Recording"));
+            levelMeter.setVisible(false);
+            spectrumCanvas.setVisible(true);
             
             elapsedSeconds = 0;
             timer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -240,11 +280,15 @@ public class RecordingDialog extends Dialog<ButtonType> {
             statusLabel.setTextFill(Color.GREEN);
             recordButton.setTooltip(new Tooltip("Start Recording"));
             levelMeter.setProgress(0);
+            levelMeter.setVisible(true);
+            spectrumCanvas.setVisible(false);
+            spectrumBins = null;
             
             Alert success = new Alert(Alert.AlertType.INFORMATION);
             success.setTitle("Recording Saved");
             success.setHeaderText(null);
             success.setContentText("Your audio diary entry has been saved!");
+            if (cssUrl != null) success.getDialogPane().getStylesheets().add(cssUrl);
             success.showAndWait();
             
             elapsedSeconds = 0;
@@ -264,6 +308,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
 
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
+        if (cssUrl != null) alert.getDialogPane().getStylesheets().add(cssUrl);
         alert.showAndWait();
     }
 
@@ -414,7 +459,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
         GraphicsContext g = waveformCanvas.getGraphicsContext2D();
         double w = waveformCanvas.getWidth();
         double h = waveformCanvas.getHeight();
-        g.setFill(Color.web("#2e2e2e"));
+        g.setFill(Color.web("#3a2f27"));
         g.fillRect(0, 0, w, h);
         if (peaks == null || peaks.length == 0) return;
 
@@ -438,31 +483,42 @@ public class RecordingDialog extends Dialog<ButtonType> {
         g.strokeLine(px, 0, px, h);
     }
 
+    private void renderSpectrum() {
+        if (spectrumCanvas == null) return;
+        GraphicsContext g = spectrumCanvas.getGraphicsContext2D();
+        double w = spectrumCanvas.getWidth();
+        double h = spectrumCanvas.getHeight();
+        g.setFill(Color.web("#3a2f27"));
+        g.fillRect(0, 0, w, h);
+        float[] bins = this.spectrumBins;
+        if (bins == null || bins.length == 0) return;
+        int n = bins.length;
+        double bw = Math.max(2, w / (n * 1.2));
+        double gap = Math.max(1, bw * 0.2);
+        g.setFill(Color.web("#FFC107"));
+        for (int i = 0; i < n; i++) {
+            double x = i * (bw + gap) + gap * 0.5;
+            double mag = Math.min(1.0, Math.max(0.0, bins[i])) * (h - 8);
+            g.fillRoundRect(x, h - mag - 4, bw, mag, 3, 3);
+        }
+    }
+
     private void togglePause() {
         try {
             if (currentClip == null) return;
-            if (paused) {
-                currentClip.start();
-                paused = false;
-                updatePauseButtonIcon();
-                startVisualizer();
-            } else {
+            if (!paused) {
                 currentClip.stop();
                 paused = true;
                 updatePauseButtonIcon();
+                stopVisualizer();
             }
         } catch (Exception ignored) { }
     }
 
     private void updatePauseButtonIcon() {
         if (pauseButton == null) return;
-        if (paused) {
-            if (imgPlay != null) pauseButton.setGraphic(iconView(imgPlay));
-            pauseButton.setTooltip(new Tooltip("Resume"));
-        } else {
-            if (imgPause != null) pauseButton.setGraphic(iconView(imgPause));
-            pauseButton.setTooltip(new Tooltip("Pause"));
-        }
+        if (imgPause != null) pauseButton.setGraphic(iconView(imgPause, 36));
+        pauseButton.setTooltip(new Tooltip("Pause"));
     }
 
     private Image loadIcon(String name) {
@@ -480,6 +536,27 @@ public class RecordingDialog extends Dialog<ButtonType> {
         iv.setFitWidth(size);
         iv.setFitHeight(size);
         iv.setPreserveRatio(true);
+        iv.getStyleClass().add("cassette-icon");
         return iv;
+    }
+
+    private void installPressAnimation(Button b) {
+        b.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> applyPressedTransform(b, true));
+        b.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> applyPressedTransform(b, false));
+        b.addEventHandler(MouseEvent.MOUSE_EXITED, e -> applyPressedTransform(b, false));
+    }
+
+    private void applyPressedTransform(Button b, boolean pressed) {
+        double scale = pressed ? 0.92 : 1.0;
+        double ty = pressed ? 2.0 : 0.0;
+        b.setScaleX(scale);
+        b.setScaleY(scale);
+        b.setTranslateY(ty);
+        javafx.scene.Node g = b.getGraphic();
+        if (g != null) {
+            g.setScaleX(scale);
+            g.setScaleY(scale);
+            g.setTranslateY(ty);
+        }
     }
 }

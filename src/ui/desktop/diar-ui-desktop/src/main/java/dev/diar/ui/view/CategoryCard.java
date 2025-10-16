@@ -5,13 +5,18 @@ import dev.diar.core.model.Category;
 import dev.diar.ui.ApplicationContext;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.HPos;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import java.io.File;
 
 public class CategoryCard extends VBox {
     private final Category category;
@@ -45,29 +50,32 @@ public class CategoryCard extends VBox {
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
         nameLabel.setTextFill(Color.web("#f4e4c1"));
         
-        Label targetLabel = new Label("Tower Target: " + category.towerBlockTarget() + " blocks");
+        String targetText = (category.towerBlockTarget() == Integer.MAX_VALUE) ? "No limit (∞)" : ("Tower Target: " + category.towerBlockTarget() + " blocks");
+        Label targetLabel = new Label(targetText);
         targetLabel.setFont(Font.font("System", 12));
         targetLabel.setTextFill(Color.web("#d4c4a1"));
 
         // Progress section
         int target = category.towerBlockTarget();
+        boolean infinite = (target == Integer.MAX_VALUE);
         int completed = blockService.getActiveTower(category.id())
             .map(t -> t.blocksCompleted())
             .orElse(0);
-        double progress = target > 0 ? (double) completed / (double) target : 0.0;
+        double progress = infinite ? ProgressBar.INDETERMINATE_PROGRESS : (target > 0 ? (double) completed / (double) target : 0.0);
 
         ProgressBar progressBar = new ProgressBar(progress);
         progressBar.setPrefWidth(400);
         progressBar.setStyle("-fx-accent: #7a9b8e;");
 
-        Label progressLabel = new Label(completed + " / " + target + " blocks");
+        String progressText = infinite ? (completed + " blocks") : (completed + " / " + target + " blocks");
+        Label progressLabel = new Label(progressText);
         progressLabel.setTextFill(Color.web("#d4c4a1"));
         progressLabel.setFont(Font.font("System", 12));
         
         Button addBlockButton = new Button("+ Add Block");
         addBlockButton.setStyle(
             "-fx-background-color: #7a9b8e; " +
-            "-fx-text-fill: white; " +
+            "-fx-text-fill: #f4e4c1; " +
             "-fx-font-weight: bold; " +
             "-fx-padding: 8 16; " +
             "-fx-background-radius: 5;"
@@ -78,7 +86,7 @@ public class CategoryCard extends VBox {
         viewTowersButton.setOnAction(e -> new TowerGalleryDialog(applicationContext, category.id()).show());
         viewTowersButton.setStyle(
             "-fx-background-color: #9b7a8e; " +
-            "-fx-text-fill: white; " +
+            "-fx-text-fill: #f4e4c1; " +
             "-fx-font-weight: bold; " +
             "-fx-padding: 8 16; " +
             "-fx-background-radius: 5;"
@@ -88,7 +96,7 @@ public class CategoryCard extends VBox {
         deleteButton.setOnAction(e -> confirmAndDelete());
         deleteButton.setStyle(
             "-fx-background-color: #c74440; " +
-            "-fx-text-fill: white; " +
+            "-fx-text-fill: #f4e4c1; " +
             "-fx-font-weight: bold; " +
             "-fx-padding: 8 16; " +
             "-fx-background-radius: 5;"
@@ -116,49 +124,63 @@ public class CategoryCard extends VBox {
         noteArea.setPrefRowCount(4);
         noteArea.setWrapText(true);
 
-        TextField tagsField = new TextField();
+        // Block image preview
+        Image blockImg = null;
+        try {
+            var res = getClass().getResource("/images/block.png");
+            if (res != null) blockImg = new Image(res.toExternalForm());
+        } catch (Exception ignored) {}
+        if (blockImg == null) {
+            File catBlock = new File(System.getProperty("user.home"), ".diar-e/assets/blocks/" + category.id() + ".png");
+            File defBlock = new File(System.getProperty("user.home"), ".diar-e/assets/blocks/default.png");
+            File chosen = catBlock.exists() ? catBlock : (defBlock.exists() ? defBlock : null);
+            if (chosen != null) blockImg = new Image(chosen.toURI().toString());
+        }
+        ImageView preview = new ImageView(blockImg);
+        if (blockImg != null) {
+            preview.setFitWidth(96);
+            preview.setFitHeight(96);
+            preview.setPreserveRatio(true);
+        }
 
-        grid.add(new Label("Title:"), 0, 0);
-        grid.add(titleField, 1, 0);
-        grid.add(new Label("Tags:"), 0, 1);
-        grid.add(tagsField, 1, 1);
-        grid.add(new Label("Note:"), 0, 2);
+        GridPane.setColumnSpan(preview, 2);
+        GridPane.setHalignment(preview, HPos.CENTER);
+        grid.add(preview, 0, 0);
+        Label titleLbl = new Label("Title:");
+        titleLbl.setStyle("-fx-text-fill: #ffffff;");
+        Label descLbl = new Label("Description:");
+        descLbl.setStyle("-fx-text-fill: #ffffff;");
+        grid.add(titleLbl, 0, 1);
+        grid.add(titleField, 1, 1);
+        grid.add(descLbl, 0, 2);
         grid.add(noteArea, 1, 2);
 
-        dialog.getDialogPane().setContent(grid);
+        // Static background image via CSS to avoid motion/reflow artifacts
+        StackPane container = new StackPane();
+        container.setStyle("-fx-background-image: url('/images/towers.jpg'); " +
+                           "-fx-background-size: cover; " +
+                           "-fx-background-position: center center; " +
+                           "-fx-background-repeat: no-repeat;");
+        grid.setStyle("-fx-background-color: rgba(58,47,39,0.82); -fx-background-radius: 10;");
+        StackPane.setAlignment(grid, Pos.CENTER);
+        container.getChildren().add(grid);
+        dialog.getDialogPane().setContent(container);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) {
+            dialog.getDialogPane().getStylesheets().add(css);
+        }
         
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
                 try {
                     String title = titleField.getText().trim();
                     String body = noteArea.getText().trim();
-                    StringBuilder sb = new StringBuilder();
-                    if (!title.isEmpty()) sb.append(title);
-                    String head = sb.toString().trim();
-                    // metadata line (tags only)
-                    StringBuilder meta = new StringBuilder();
-                    String tagsRaw = tagsField.getText() != null ? tagsField.getText().trim() : "";
-                    if (!tagsRaw.isEmpty()) {
-                        String[] parts = tagsRaw.split("[,\n\r\t ]+");
-                        for (String p : parts) {
-                            if (p.isBlank()) continue;
-                            if (meta.length() > 0) meta.append(' ');
-                            if (p.startsWith("#")) meta.append(p);
-                            else meta.append('#').append(p);
-                        }
-                    }
-                    String metaLine = meta.toString();
                     String finalNote;
-                    if (!body.isEmpty()) {
-                        finalNote = head.isEmpty() ? body : head + "\n\n" + body;
-                        if (!metaLine.isEmpty()) finalNote = finalNote + "\n\n" + metaLine;
-                    } else {
-                        if (head.isEmpty() && metaLine.isEmpty()) finalNote = null;
-                        else if (head.isEmpty()) finalNote = metaLine;
-                        else if (metaLine.isEmpty()) finalNote = head;
-                        else finalNote = head + "\n\n" + metaLine;
-                    }
+                    if (!title.isEmpty() && !body.isEmpty()) finalNote = title + "\n\n" + body;
+                    else if (!title.isEmpty()) finalNote = title;
+                    else if (!body.isEmpty()) finalNote = body;
+                    else finalNote = null;
                     blockService.addBlock(category.id(), finalNote);
                     onUpdate.run();
                     
@@ -166,9 +188,11 @@ public class CategoryCard extends VBox {
                     success.setTitle("Block Added");
                     success.setHeaderText(null);
                     success.setContentText("Block added to " + category.name() + "! 🎉");
+                    if (css != null) success.getDialogPane().getStylesheets().add(css);
                     success.showAndWait();
                 } catch (Exception e) {
                     Alert error = new Alert(Alert.AlertType.ERROR, "Failed to add block: " + e.getMessage());
+                    if (css != null) error.getDialogPane().getStylesheets().add(css);
                     error.showAndWait();
                 }
             }
@@ -181,6 +205,8 @@ public class CategoryCard extends VBox {
         confirm.setHeaderText("Demolish '" + category.name() + "'?");
         confirm.setContentText("This will remove the entire category. This action cannot be undone.");
         confirm.getButtonTypes().setAll(ButtonType.CANCEL, ButtonType.OK);
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) confirm.getDialogPane().getStylesheets().add(css);
         confirm.showAndWait().ifPresent(bt -> {
             if (bt == ButtonType.OK) {
                 try {
@@ -188,6 +214,7 @@ public class CategoryCard extends VBox {
                     onUpdate.run();
                 } catch (Exception ex) {
                     Alert err = new Alert(Alert.AlertType.ERROR, "Failed to demolish: " + ex.getMessage());
+                    if (css != null) err.getDialogPane().getStylesheets().add(css);
                     err.showAndWait();
                 }
             }

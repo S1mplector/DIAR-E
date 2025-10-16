@@ -50,7 +50,6 @@ public class TowerGalleryDialog extends Stage {
     private ScrollPane currentScroll;
     private int highlightedIndex = -1;
     private Label stageBadge;
-    private ComboBox<String> styleBox;
 
     public TowerGalleryDialog(ApplicationContext context, String categoryId) {
         this.context = context;
@@ -64,9 +63,12 @@ public class TowerGalleryDialog extends Stage {
     private void setupUI() {
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(10));
+        // enforce dark-brown background regardless of platform defaults
+        root.setStyle("-fx-background-color: #3a2f27;");
 
         // Left: towers list
         towersList = new ListView<>();
+        towersList.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1;");
         towersList.setPrefWidth(260);
         towersList.setCellFactory(lv -> new ListCell<>() {
             @Override
@@ -76,8 +78,9 @@ public class TowerGalleryDialog extends Stage {
                     setText(null);
                 } else {
                     int stage = service.stageForTower(item);
+                    String tgt = (item.blockTarget() == Integer.MAX_VALUE) ? "∞" : String.valueOf(item.blockTarget());
                     String label = (item.completedOn() != null ? "Completed" : "Active") +
-                            " • " + item.blocksCompleted() + "/" + item.blockTarget() +
+                            " • " + item.blocksCompleted() + "/" + tgt +
                             " • Stage " + stage + "/10" + (item.completedOn() != null ? (" • " + item.completedOn()) : "");
                     setText(label);
                 }
@@ -90,19 +93,22 @@ public class TowerGalleryDialog extends Stage {
         renderPane.setPrefSize(520, 480);
         renderPane.setStyle("-fx-background-color: #2e2e2e; -fx-border-color: #555; -fx-border-width: 1;");
         stageBadge = new Label("");
-        stageBadge.setStyle("-fx-background-color: rgba(0,0,0,0.5); -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 6;");
+        stageBadge.setStyle("-fx-background-color: rgba(0,0,0,0.5); -fx-text-fill: #f4e4c1; -fx-padding: 4 8; -fx-background-radius: 6;");
         StackPane.setAlignment(stageBadge, Pos.TOP_RIGHT);
         renderPane.getChildren().add(stageBadge);
 
         // Center Right: block list panel
         rightPane = new VBox(8);
         rightPane.setPadding(new Insets(8));
+        rightPane.setStyle("-fx-background-color: #3a2f27;");
         Label blocksHdr = new Label("Blocks");
         blocksHdr.setFont(Font.font("System", 14));
         blockFilterField = new TextField();
+        blockFilterField.setStyle("-fx-background-color: #5a4a3a; -fx-control-inner-background: #2e2e2e; -fx-text-fill: #f4e4c1;");
         blockFilterField.setPromptText("Filter blocks...");
         blockFilterField.textProperty().addListener((obs, ov, nv) -> applyBlockFilter());
         blockListView = new ListView<>();
+        blockListView.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1;");
         blockListView.setPrefWidth(300);
         blockListView.setCellFactory(lv -> new ListCell<>(){
             @Override
@@ -134,25 +140,18 @@ public class TowerGalleryDialog extends Stage {
 
         // Join center as HBox: render left + separator + right list
         HBox centerBox = new HBox(10, renderPane, new Separator(Orientation.VERTICAL), rightPane);
+        centerBox.setStyle("-fx-background-color: #3a2f27;");
 
-        // Bottom: buttons
-        Button viewBlocksBtn = new Button("View Blocks");
-        viewBlocksBtn.setOnAction(e -> viewBlocks());
-        // Zoom control
+        // Bottom: zoom and info
         Label zoomLbl = new Label("Zoom");
-        zoomSlider = new Slider(0.25, 1.5, blockScale);
+        zoomSlider = new Slider(0.05, 1.5, blockScale);
         zoomSlider.setPrefWidth(180);
         zoomSlider.valueProperty().addListener((obs, ov, nv) -> { blockScale = nv.doubleValue(); rerenderSelected(); });
-        // Style selector
-        Label styleLbl = new Label("Style");
-        styleBox = new ComboBox<>();
-        styleBox.getItems().addAll("Pyramid", "Ziggurat", "Spire");
-        styleBox.getSelectionModel().select(0);
-        styleBox.valueProperty().addListener((obs, ov, nv) -> rerenderSelected());
         infoLabel = new Label("");
         infoLabel.setTextFill(Color.web("#ddd"));
         infoLabel.setFont(Font.font("System", 12));
-        HBox bottom = new HBox(10, viewBlocksBtn, new Separator(), zoomLbl, zoomSlider, new Separator(), styleLbl, styleBox, new Separator(), infoLabel);
+        HBox bottom = new HBox(10, zoomLbl, zoomSlider, new Separator(), infoLabel);
+        bottom.setStyle("-fx-background-color: #3a2f27;");
         bottom.setAlignment(Pos.CENTER_LEFT);
         bottom.setPadding(new Insets(8, 0, 0, 0));
 
@@ -161,6 +160,10 @@ public class TowerGalleryDialog extends Stage {
         root.setBottom(bottom);
 
         Scene scene = new Scene(root, 900, 560);
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) {
+            scene.getStylesheets().add(css);
+        }
         setScene(scene);
 
         // Load data
@@ -184,8 +187,13 @@ public class TowerGalleryDialog extends Stage {
             return;
         }
         int stage = service.stageForTower(tower);
-        infoLabel.setText("Tower: " + tower.blocksCompleted() + "/" + tower.blockTarget() + " (Stage " + stage + ")");
-        stageBadge.setText("Stage " + stage + "/10");
+        if (tower.blockTarget() == Integer.MAX_VALUE) {
+            infoLabel.setText("Tower: " + tower.blocksCompleted() + " blocks (∞)");
+            stageBadge.setText("∞");
+        } else {
+            infoLabel.setText("Tower: " + tower.blocksCompleted() + "/" + tower.blockTarget() + " (Stage " + stage + ")");
+            stageBadge.setText("Stage " + stage + "/10");
+        }
 
         // Procedural rendering: stack blocks bottom-up
         // Load logs for this tower to map block -> log
@@ -217,6 +225,7 @@ public class TowerGalleryDialog extends Stage {
         VBox container = new VBox(4);
         container.setPadding(new Insets(8));
         container.setFillWidth(true);
+        container.setStyle("-fx-background-color: #2e2e2e;");
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
@@ -228,16 +237,12 @@ public class TowerGalleryDialog extends Stage {
         int blocksRemaining = completed;
         int cursor = 0; // index into entries
 
-        // choose layout parameters based on style
-        String style = styleBox != null && styleBox.getValue() != null ? styleBox.getValue() : "Pyramid";
+        // Procedural layout that evolves with tower size (Wall-E style):
+        // small towers (under 10 blocks) are spire-like; medium towers stabilize; large towers ziggurat.
         int baseWidth = Math.min(8, Math.max(2, (int)Math.ceil(Math.sqrt(Math.max(1, completed)) )));
-        int rowsPerWidth;
-        double jitterAmp;
-        switch (style) {
-            case "Ziggurat" -> { rowsPerWidth = 3; jitterAmp = 0; }
-            case "Spire" -> { rowsPerWidth = 1; jitterAmp = (Math.max(32, (blockImage != null ? blockImage.getWidth() : 256) * blockScale)) * 0.08; }
-            default -> { rowsPerWidth = 2; jitterAmp = (Math.max(32, (blockImage != null ? blockImage.getWidth() : 256) * blockScale)) * 0.04; }
-        }
+        double wref = Math.max(32, (blockImage != null ? blockImage.getWidth() : 256) * blockScale);
+        int rowsPerWidth = (completed < 10) ? 1 : (completed < 40 ? 2 : 3);
+        double jitterAmp = wref * (completed < 10 ? 0.08 : 0.04);
         int currentWidth = baseWidth;
         int rowsAtThisWidth = 0;
         int rowNo = 0;
@@ -334,6 +339,8 @@ public class TowerGalleryDialog extends Stage {
         });
         lv.getItems().setAll(entries);
         dlg.getDialogPane().setContent(new VBox(10, new Label("Blocks in selected tower:"), lv));
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) dlg.getDialogPane().getStylesheets().add(css);
         dlg.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         dlg.showAndWait();
     }
@@ -370,6 +377,8 @@ public class TowerGalleryDialog extends Stage {
         ta.setWrapText(true);
         ta.setPrefRowCount(6);
         dlg.getDialogPane().setContent(new VBox(8, new Label("Note:"), ta));
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) dlg.getDialogPane().getStylesheets().add(css);
         dlg.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         dlg.showAndWait();
     }

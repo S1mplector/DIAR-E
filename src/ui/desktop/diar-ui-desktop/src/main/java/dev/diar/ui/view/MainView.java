@@ -188,19 +188,28 @@ public class MainView extends BorderPane {
             new SpinnerValueFactory.IntegerSpinnerValueFactory(5, Integer.MAX_VALUE, 10);
         targetSpinner.setValueFactory(valueFactory);
         targetSpinner.setEditable(true);
+
+        CheckBox infiniteBox = new CheckBox("No limit (∞)");
+        infiniteBox.selectedProperty().addListener((obs, ov, nv) -> {
+            targetSpinner.setDisable(nv);
+        });
         
         grid.add(new Label("Tower Name:"), 0, 0);
         grid.add(nameField, 1, 0);
         grid.add(new Label("Blocks to Complete:"), 0, 1);
         grid.add(targetSpinner, 1, 1);
+        grid.add(infiniteBox, 1, 2);
         
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) dialog.getDialogPane().getStylesheets().add(css);
         
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK && !nameField.getText().isBlank()) {
                 try {
-                    categoryService.createCategory(nameField.getText(), targetSpinner.getValue());
+                    int target = infiniteBox.isSelected() ? Integer.MAX_VALUE : targetSpinner.getValue();
+                    categoryService.createCategory(nameField.getText(), target);
                     loadCategories();
                     updateStatus("Category created: " + nameField.getText());
                 } catch (Exception e) {
@@ -218,7 +227,7 @@ public class MainView extends BorderPane {
     private void styleButton(Button button, String bgColor) {
         button.setStyle(
             "-fx-background-color: " + bgColor + "; " +
-            "-fx-text-fill: white; " +
+            "-fx-text-fill: #f4e4c1; " +
             "-fx-font-weight: bold; " +
             "-fx-padding: 10 20; " +
             "-fx-background-radius: 5;"
@@ -233,6 +242,8 @@ public class MainView extends BorderPane {
 
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) alert.getDialogPane().getStylesheets().add(css);
         alert.showAndWait();
     }
 
@@ -262,6 +273,8 @@ public class MainView extends BorderPane {
             if (file != null) {
                 Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Remap IDs to avoid collisions?", ButtonType.YES, ButtonType.NO, ButtonType.CANCEL);
                 confirm.setHeaderText("Import Options");
+                String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+                if (css != null) confirm.getDialogPane().getStylesheets().add(css);
                 var res = confirm.showAndWait();
                 if (res.isPresent() && res.get() != ButtonType.CANCEL) {
                     boolean remap = res.get() == ButtonType.YES;

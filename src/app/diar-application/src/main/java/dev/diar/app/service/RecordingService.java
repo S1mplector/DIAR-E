@@ -49,6 +49,21 @@ public class RecordingService {
         }
     }
 
+    public String startRecordingWithSpectrum(Consumer<Double> levelMeterCallback, Consumer<float[]> spectrumCallback) {
+        try {
+            Files.createDirectories(recordingsDir);
+            String id = UUID.randomUUID().toString();
+            String fileName = id + ".wav";
+            Path targetFile = recordingsDir.resolve(fileName);
+
+            audioCapturePort.startRecordingWithSpectrum(targetFile, levelMeterCallback, spectrumCallback);
+
+            return id;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to start recording (spectrum)", e);
+        }
+    }
+
     public Recording stopRecording(String recordingId) {
         try {
             Path filePath = audioCapturePort.stopRecording();
