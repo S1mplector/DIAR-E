@@ -8,8 +8,28 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.TilePane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
@@ -88,9 +108,29 @@ public class MainView extends BorderPane {
         header.setAlignment(Pos.CENTER);
         header.setStyle("-fx-background-color: #5a4a3a;");
         
+        ImageView logoView = null;
+        try {
+            var url = getClass().getResource("/images/walle.png");
+            if (url != null) {
+                Image img = new Image(url.toExternalForm(), 48, 48, true, true);
+                logoView = new ImageView(img);
+                logoView.setFitWidth(48);
+                logoView.setFitHeight(48);
+                logoView.setPreserveRatio(true);
+            }
+        } catch (Exception ignored) { }
+        
         Label titleLabel = new Label("DIAR-E");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 36));
         titleLabel.setTextFill(Color.web("#f4e4c1"));
+        
+        HBox titleBox = new HBox(12);
+        titleBox.setAlignment(Pos.CENTER);
+        if (logoView != null) {
+            titleBox.getChildren().addAll(logoView, titleLabel);
+        } else {
+            titleBox.getChildren().add(titleLabel);
+        }
         
         Label subtitleLabel = new Label("Daily Achievement Logger");
         subtitleLabel.setFont(Font.font("System", FontWeight.NORMAL, 14));
@@ -100,14 +140,14 @@ public class MainView extends BorderPane {
         styleButton(addCategoryButton, "#7a9b8e");
         addCategoryButton.setOnAction(e -> showAddCategoryDialog());
         
-        Button recordingButton = new Button("🎤 Audio Diary");
+        Button recordingButton = new Button("Audio Diary");
         styleButton(recordingButton, "#9b7a8e");
         recordingButton.setOnAction(e -> showRecordingDialog());
         
         HBox buttonBox = new HBox(10, addCategoryButton, recordingButton);
         buttonBox.setAlignment(Pos.CENTER);
         
-        header.getChildren().addAll(titleLabel, subtitleLabel, buttonBox);
+        header.getChildren().addAll(titleBox, subtitleLabel, buttonBox);
         return header;
     }
 

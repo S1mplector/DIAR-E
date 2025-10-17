@@ -30,6 +30,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.time.format.DateTimeFormatter;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
 
 public class TowerGalleryDialog extends Stage {
     private final ApplicationContext context;
@@ -50,6 +54,7 @@ public class TowerGalleryDialog extends Stage {
     private ScrollPane currentScroll;
     private int highlightedIndex = -1;
     private Label stageBadge;
+    private Timeline buildTimeline;
 
     public TowerGalleryDialog(ApplicationContext context, String categoryId) {
         this.context = context;
@@ -186,6 +191,7 @@ public class TowerGalleryDialog extends Stage {
             blockListView.getItems().clear();
             return;
         }
+        if (buildTimeline != null) { buildTimeline.stop(); buildTimeline = null; }
         int stage = service.stageForTower(tower);
         if (tower.blockTarget() == Integer.MAX_VALUE) {
             infoLabel.setText("Tower: " + tower.blocksCompleted() + " blocks (∞)");
@@ -281,7 +287,7 @@ public class TowerGalleryDialog extends Stage {
                 currentBlocks.add(new BlockItem(blockIndex, entry));
             }
 
-            blockStack.getChildren().add(row);
+            blockStack.getChildren().add(0, row);
 
             rowsAtThisWidth++;
             if (rowsAtThisWidth >= rowsPerWidth && currentWidth > 1) {
@@ -315,6 +321,7 @@ public class TowerGalleryDialog extends Stage {
         // Populate right list
         applyBlockFilter();
         highlightedIndex = -1;
+        playBuildAnimation();
     }
 
     private void viewBlocks() {
@@ -364,6 +371,9 @@ public class TowerGalleryDialog extends Stage {
             r.setStroke(Color.web("#2e2e2e"));
             pane.getChildren().add(r);
         }
+        pane.setOpacity(0.0);
+        pane.setScaleY(0.3);
+        pane.setTranslateY(10);
         return pane;
     }
 
@@ -388,6 +398,25 @@ public class TowerGalleryDialog extends Stage {
         if (sel != null) {
             renderTower(sel);
         }
+    }
+
+    private void playBuildAnimation() {
+        if (buildTimeline != null) buildTimeline.stop();
+        buildTimeline = new Timeline();
+        double d = 28.0;
+        for (int i = 0; i < blockNodes.size(); i++) {
+            StackPane n = blockNodes.get(i);
+            KeyFrame kf = new KeyFrame(Duration.millis(i * d),
+                new KeyValue(n.opacityProperty(), 1.0),
+                new KeyValue(n.scaleYProperty(), 1.0),
+                new KeyValue(n.translateYProperty(), 0.0)
+            );
+            buildTimeline.getKeyFrames().add(kf);
+        }
+        if (currentScroll != null) {
+            buildTimeline.currentTimeProperty().addListener((o, ov, nv) -> currentScroll.setVvalue(1.0));
+        }
+        buildTimeline.playFromStart();
     }
 
     private void applyBlockFilter() {

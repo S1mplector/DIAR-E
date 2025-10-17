@@ -72,7 +72,31 @@ public class CategoryCard extends VBox {
         progressLabel.setTextFill(Color.web("#d4c4a1"));
         progressLabel.setFont(Font.font("System", 12));
         
-        Button addBlockButton = new Button("+ Add Block");
+        // Load button icons
+        ImageView addBlockIcon = null;
+        try {
+            var res = getClass().getResource("/images/block.png");
+            if (res != null) {
+                Image img = new Image(res.toExternalForm(), 18, 18, true, true);
+                addBlockIcon = new ImageView(img);
+                addBlockIcon.setFitWidth(18);
+                addBlockIcon.setFitHeight(18);
+                addBlockIcon.setPreserveRatio(true);
+            }
+        } catch (Exception ignored) {}
+        ImageView viewTowersIcon = null;
+        try {
+            var res = getClass().getResource("/images/tower.png");
+            if (res != null) {
+                Image img = new Image(res.toExternalForm(), 18, 18, true, true);
+                viewTowersIcon = new ImageView(img);
+                viewTowersIcon.setFitWidth(18);
+                viewTowersIcon.setFitHeight(18);
+                viewTowersIcon.setPreserveRatio(true);
+            }
+        } catch (Exception ignored) {}
+
+        Button addBlockButton = new Button("Add Block");
         addBlockButton.setStyle(
             "-fx-background-color: #7a9b8e; " +
             "-fx-text-fill: #f4e4c1; " +
@@ -80,9 +104,14 @@ public class CategoryCard extends VBox {
             "-fx-padding: 8 16; " +
             "-fx-background-radius: 5;"
         );
+        if (addBlockIcon != null) {
+            addBlockButton.setGraphic(addBlockIcon);
+            addBlockButton.setContentDisplay(ContentDisplay.RIGHT);
+            addBlockButton.setGraphicTextGap(8);
+        }
         addBlockButton.setOnAction(e -> showAddBlockDialog());
 
-        Button viewTowersButton = new Button("🏗 View Towers");
+        Button viewTowersButton = new Button("View Towers");
         viewTowersButton.setOnAction(e -> new TowerGalleryDialog(applicationContext, category.id()).show());
         viewTowersButton.setStyle(
             "-fx-background-color: #9b7a8e; " +
@@ -91,8 +120,13 @@ public class CategoryCard extends VBox {
             "-fx-padding: 8 16; " +
             "-fx-background-radius: 5;"
         );
+        if (viewTowersIcon != null) {
+            viewTowersButton.setGraphic(viewTowersIcon);
+            viewTowersButton.setContentDisplay(ContentDisplay.RIGHT);
+            viewTowersButton.setGraphicTextGap(8);
+        }
 
-        Button deleteButton = new Button("🧨 Demolish Tower");
+        Button deleteButton = new Button("Demolish Tower");
         deleteButton.setOnAction(e -> confirmAndDelete());
         deleteButton.setStyle(
             "-fx-background-color: #c74440; " +
@@ -187,7 +221,7 @@ public class CategoryCard extends VBox {
                     Alert success = new Alert(Alert.AlertType.INFORMATION);
                     success.setTitle("Block Added");
                     success.setHeaderText(null);
-                    success.setContentText("Block added to " + category.name() + "! 🎉");
+                    success.setContentText("Block added to " + category.name() + "!");
                     if (css != null) success.getDialogPane().getStylesheets().add(css);
                     success.showAndWait();
                 } catch (Exception e) {
