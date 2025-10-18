@@ -62,28 +62,61 @@
 }
 
 /* Dialogs and Alerts */
-.dialog-pane {
+.dialog-pane,
+.alert .dialog-pane,
+.text-input-dialog .dialog-pane,
+.choice-dialog .dialog-pane {
   -fx-background-color: var(--bg);
-  -fx-background-color: #3a2f27;
+  -fx-background-color: #3a2f27; /* match SettingsDialog panel */
+  /* drive default control styling like SettingsDialog does */
+  -fx-base: #3a2f27;
+  -fx-control-inner-background: #2e2e2e;
+  -fx-text-background-color: #d4c4a1;
 }
-.dialog-pane .header-panel {
+.dialog-pane .header-panel,
+.alert .dialog-pane .header-panel,
+.text-input-dialog .dialog-pane .header-panel,
+.choice-dialog .dialog-pane .header-panel {
   -fx-background-color: var(--bg-alt);
   -fx-background-color: #5a4a3a;
 }
-.dialog-pane .label {
+/* Content area inside dialogs (prevents default white background) */
+.dialog-pane > .content,
+.dialog-pane .content,
+.dialog-pane .expandable-content,
+.dialog-pane > *.graphic-container {
+  -fx-background-color: var(--bg);
+  -fx-background-color: #3a2f27;
+}
+.dialog-pane .label,
+.dialog-pane .header-panel .label {
   -fx-text-fill: var(--text-dim);
   -fx-text-fill: #d4c4a1;
 }
+/* Button bar area at the bottom of dialogs */
+.dialog-pane .button-bar,
+.dialog-pane .button-bar > .container {
+  -fx-background-color: var(--bg-alt);
+  -fx-background-color: #5a4a3a;
+}
+/* Buttons in dialogs: reuse SettingsDialog neutral button color */
 .dialog-pane .button {
-  -fx-background-color: var(--accent);
-  -fx-background-color: #7a9b8e;
-  -fx-text-fill: var(--text);
+  -fx-background-color: -fx-base; /* same brown as panel */
   -fx-text-fill: #f4e4c1;
   -fx-font-weight: bold;
+  -fx-border-color: #2a1f17;
+  -fx-border-width: 1;
+  -fx-background-radius: 6;
+  -fx-border-radius: 6;
+}
+.dialog-pane .button:hover {
+  -fx-background-color: #45372e;
+}
+.dialog-pane .button:armed, .dialog-pane .button:pressed {
+  -fx-background-color: #2f251f;
 }
 .dialog-pane .button:default {
-  -fx-background-color: var(--accent-2);
-  -fx-background-color: #9b7a8e;
+  -fx-background-color: -fx-base; /* keep same fill, let focus ring show */
 }
 
 /* Inputs */
@@ -94,6 +127,18 @@
   -fx-text-fill: var(--text);
   -fx-text-fill: #f4e4c1;
   -fx-prompt-text-fill: derive(var(--text-dim), -30%);
+}
+.spinner .text-field {
+  -fx-background-color: #5a4a3a;
+  -fx-control-inner-background: #2e2e2e;
+  -fx-text-fill: #f4e4c1;
+}
+.spinner .increment-arrow-button, .spinner .decrement-arrow-button {
+  -fx-background-color: #3a2f27;
+  -fx-border-color: #2a1f17;
+}
+.spinner .increment-arrow, .spinner .decrement-arrow {
+  -fx-background-color: #f4e4c1;
 }
 .text-area .content {
   -fx-background-color: #2e2e2e;
@@ -204,13 +249,33 @@
   -fx-background-color: #5a4a3a;
 }
 
-/* Tooltip */
+/* ToolTip */
 .tooltip {
   -fx-background-color: var(--bg-alt);
   -fx-background-color: #5a4a3a;
   -fx-text-fill: var(--text);
   -fx-text-fill: #f4e4c1;
   -fx-background-radius: 6;
+}
+
+/* CheckBox */
+.check-box .box {
+  -fx-background-color: #5a4a3a;
+  -fx-border-color: #2a1f17;
+}
+.check-box:selected .box {
+  -fx-background-color: #7a9b8e;
+}
+.check-box .mark {
+  -fx-background-color: #f4e4c1;
+}
+
+/* Dialog buttons focus look (avoid bright aqua ring) */
+.dialog-pane .button:focused {
+  -fx-effect: dropshadow(gaussian, rgba(255,255,255,0.15), 6, 0.3, 0, 0);
+}
+.dialog-pane .button:default:focused {
+  -fx-effect: dropshadow(gaussian, rgba(255,255,255,0.25), 8, 0.35, 0, 0);
 }
 
 /* Separator */
@@ -223,7 +288,33 @@
   -fx-background-color: #42372f;
 }
 .slider .thumb {
-  -fx-background-color: #7a9b8e;
+  -fx-background-color: #FFC107; /* Wall-E yellow */
+  -fx-background-insets: 0;
+  -fx-background-radius: 10;
+}
+.slider:focused .thumb {
+  -fx-effect: dropshadow(gaussian, rgba(255,193,7,0.4), 8, 0.35, 0, 0);
+}
+
+/* High-specificity override for our Zoom slider */
+.walle-slider {
+  -fx-padding: 0;
+}
+.walle-slider .track {
+  -fx-background-color: #42372f;
+  -fx-background-insets: 0;
+  -fx-background-radius: 8;
+  -fx-background-image: null;
+}
+.walle-slider .thumb {
+  -fx-background-color: #FFC107;
+  -fx-background-insets: 0;
+  -fx-background-radius: 10;
+  -fx-background-image: null;
+  -fx-border-color: transparent;
+}
+.walle-slider:focused .thumb {
+  -fx-effect: dropshadow(gaussian, rgba(255,193,7,0.45), 8, 0.4, 0, 0);
 }
 
 /* Cassette-style icon buttons */

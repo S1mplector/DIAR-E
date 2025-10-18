@@ -59,6 +59,8 @@ public class SettingsDialog extends Stage {
         GridPane grid = new GridPane();
         grid.setHgap(12);
         grid.setVgap(8);
+        grid.setStyle("-fx-background-color: rgba(0,0,0,0.18); -fx-background-insets: 0; -fx-background-radius: 18; -fx-padding: 16; -fx-background-clip: padding-box; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.20), 12, 0.22, 0, 2);");
+        VBox.setMargin(grid, new Insets(8));
 
         int r = 0;
         dataFolderValue = addRow(grid, r++, "Data Folder:");
@@ -82,6 +84,12 @@ public class SettingsDialog extends Stage {
         refreshBtn.setOnAction(e -> refreshStats());
         Button closeBtn = new Button("Close");
         closeBtn.setOnAction(e -> close());
+        refreshBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        closeBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        refreshBtn.setOnMouseEntered(e -> refreshBtn.setOpacity(0.9));
+        refreshBtn.setOnMouseExited(e -> refreshBtn.setOpacity(1.0));
+        closeBtn.setOnMouseEntered(e -> closeBtn.setOpacity(0.9));
+        closeBtn.setOnMouseExited(e -> closeBtn.setOpacity(1.0));
         HBox actions = new HBox(10, refreshBtn, closeBtn);
         actions.setAlignment(Pos.CENTER_RIGHT);
 

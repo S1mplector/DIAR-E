@@ -34,6 +34,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
+import javafx.application.Platform;
 
 public class TowerGalleryDialog extends Stage {
     private final ApplicationContext context;
@@ -108,6 +109,7 @@ public class TowerGalleryDialog extends Stage {
         rightPane.setStyle("-fx-background-color: #3a2f27;");
         Label blocksHdr = new Label("Blocks");
         blocksHdr.setFont(Font.font("System", 14));
+        blocksHdr.setTextFill(Color.web("#d4c4a1"));
         blockFilterField = new TextField();
         blockFilterField.setStyle("-fx-background-color: #5a4a3a; -fx-control-inner-background: #2e2e2e; -fx-text-fill: #f4e4c1;");
         blockFilterField.setPromptText("Filter blocks...");
@@ -149,11 +151,17 @@ public class TowerGalleryDialog extends Stage {
 
         // Bottom: zoom and info
         Label zoomLbl = new Label("Zoom");
+        zoomLbl.setTextFill(Color.web("#d4c4a1"));
         zoomSlider = new Slider(0.05, 1.5, blockScale);
+        zoomSlider.getStyleClass().add("walle-slider");
         zoomSlider.setPrefWidth(180);
         zoomSlider.valueProperty().addListener((obs, ov, nv) -> { blockScale = nv.doubleValue(); rerenderSelected(); });
+        // Force style of platform slider subnodes
+        zoomSlider.skinProperty().addListener((o, ov, nv) -> Platform.runLater(this::styleZoomSlider));
+        zoomSlider.sceneProperty().addListener((o, ov, nv) -> Platform.runLater(this::styleZoomSlider));
+        Platform.runLater(this::styleZoomSlider);
         infoLabel = new Label("");
-        infoLabel.setTextFill(Color.web("#ddd"));
+        infoLabel.setTextFill(Color.web("#d4c4a1"));
         infoLabel.setFont(Font.font("System", 12));
         HBox bottom = new HBox(10, zoomLbl, zoomSlider, new Separator(), infoLabel);
         bottom.setStyle("-fx-background-color: #3a2f27;");
@@ -397,6 +405,21 @@ public class TowerGalleryDialog extends Stage {
         Tower sel = towersList.getSelectionModel().getSelectedItem();
         if (sel != null) {
             renderTower(sel);
+        }
+    }
+
+    private void styleZoomSlider() {
+        try {
+            if (zoomSlider == null) return;
+            var track = zoomSlider.lookup(".track");
+            if (track instanceof Region r) {
+                r.setStyle("-fx-background-color: #42372f; -fx-background-insets: 0; -fx-background-radius: 8; -fx-background-image: null;");
+            }
+            var thumb = zoomSlider.lookup(".thumb");
+            if (thumb instanceof Region r2) {
+                r2.setStyle("-fx-background-color: #FFC107; -fx-background-insets: 0; -fx-background-radius: 10; -fx-background-image: null; -fx-border-color: transparent;");
+            }
+        } catch (Exception ignored) {
         }
     }
 

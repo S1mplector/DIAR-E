@@ -219,24 +219,34 @@ public class MainView extends BorderPane {
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new Insets(20));
+        // Match storage settings background
+        grid.setStyle("-fx-background-color: #3a2f27;");
         
         TextField nameField = new TextField();
         nameField.setPromptText("Tower name (e.g., 'Exercise', 'Reading')");
+        nameField.setStyle("-fx-background-color: #5a4a3a; -fx-control-inner-background: #2e2e2e; -fx-text-fill: #f4e4c1;");
         
         Spinner<Integer> targetSpinner = new Spinner<>();
         SpinnerValueFactory.IntegerSpinnerValueFactory valueFactory =
             new SpinnerValueFactory.IntegerSpinnerValueFactory(5, Integer.MAX_VALUE, 10);
         targetSpinner.setValueFactory(valueFactory);
         targetSpinner.setEditable(true);
+        // Style spinner editor to dark
+        targetSpinner.getEditor().setStyle("-fx-background-color: #5a4a3a; -fx-control-inner-background: #2e2e2e; -fx-text-fill: #f4e4c1;");
 
         CheckBox infiniteBox = new CheckBox("No limit (∞)");
         infiniteBox.selectedProperty().addListener((obs, ov, nv) -> {
             targetSpinner.setDisable(nv);
         });
+        infiniteBox.setStyle("-fx-text-fill: #d4c4a1;");
         
-        grid.add(new Label("Tower Name:"), 0, 0);
+        Label nameLbl = new Label("Tower Name:");
+        nameLbl.setStyle("-fx-text-fill: #d4c4a1;");
+        grid.add(nameLbl, 0, 0);
         grid.add(nameField, 1, 0);
-        grid.add(new Label("Blocks to Complete:"), 0, 1);
+        Label blocksLbl = new Label("Blocks to Complete:");
+        blocksLbl.setStyle("-fx-text-fill: #d4c4a1;");
+        grid.add(blocksLbl, 0, 1);
         grid.add(targetSpinner, 1, 1);
         grid.add(infiniteBox, 1, 2);
         
@@ -244,7 +254,27 @@ public class MainView extends BorderPane {
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
         if (css != null) dialog.getDialogPane().getStylesheets().add(css);
-        
+        // Ensure dialog pane itself uses dark palette and focus colors
+        dialog.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        // Reuse Settings button colors for OK/Cancel
+        Button okBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        if (okBtn != null) {
+            okBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        }
+        Button cancelBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+        if (cancelBtn != null) {
+            cancelBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        }
+        // Style internal regions when skin is ready
+        dialog.setOnShown(ev -> {
+            javafx.scene.Node header = dialog.getDialogPane().lookup(".header-panel");
+            if (header != null) header.setStyle("-fx-background-color: #5a4a3a;");
+            javafx.scene.Node contentReg = dialog.getDialogPane().lookup(".content");
+            if (contentReg != null) contentReg.setStyle("-fx-background-color: #3a2f27;");
+            javafx.scene.Node buttonBar = dialog.getDialogPane().lookup(".button-bar");
+            if (buttonBar != null) buttonBar.setStyle("-fx-background-color: #5a4a3a;");
+        });
+
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK && !nameField.getText().isBlank()) {
                 try {
