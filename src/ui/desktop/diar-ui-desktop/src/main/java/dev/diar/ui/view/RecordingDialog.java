@@ -20,11 +20,16 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
 import javafx.stage.Stage;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 
 import javax.sound.sampled.*;
 import java.io.File;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Comparator;
 
 public class RecordingDialog extends Dialog<ButtonType> {
     private final RecordingService recordingService;
@@ -56,6 +61,11 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private Label micHealthLabel;
     private ComboBox<AudioDevice> deviceCombo;
     private Timeline deviceRefreshTimer;
+    private ObservableList<Recording> recordingsMaster = FXCollections.observableArrayList();
+    private FilteredList<Recording> recordingsFiltered;
+    private SortedList<Recording> recordingsSorted;
+    private TextField searchField;
+    private ComboBox<String> sortCombo;
 
     public RecordingDialog(RecordingService recordingService) {
         this.recordingService = recordingService;
@@ -178,12 +188,42 @@ public class RecordingDialog extends Dialog<ButtonType> {
         recordingsLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
         recordingsLabel.setTextFill(Color.web("#f4e4c1"));
 
+        // Search + Sort bar
+        searchField = new TextField();
+        searchField.setPromptText("Search by name or date...");
+        searchField.setPrefWidth(180);
+        sortCombo = new ComboBox<>();
+        sortCombo.getItems().setAll("Newest first", "Oldest first", "Name A-Z", "Name Z-A", "Duration longest", "Duration shortest");
+        sortCombo.getSelectionModel().select("Newest first");
+        sortCombo.setPrefWidth(160);
+        HBox searchSortBar = new HBox(10, searchField, sortCombo);
+        searchSortBar.setAlignment(Pos.CENTER);
+        searchSortBar.setStyle("-fx-background-color: #3a2f27;");
+        searchSortBar.setMaxWidth(360);
+
         recordingsList = new ListView<>();
         recordingsList.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1; " +
                 "-fx-selection-bar: #FFC107; -fx-selection-bar-non-focused: #E0B000; -fx-selection-bar-text: #3a2f27;");
         recordingsList.setPrefHeight(180);
         recordingsList.setPrefWidth(360);
         recordingsList.setMaxWidth(360);
+        // Wire filtered/sorted pipeline
+        recordingsFiltered = new FilteredList<>(recordingsMaster, r -> true);
+        recordingsSorted = new SortedList<>(recordingsFiltered);
+        recordingsList.setItems(recordingsSorted);
+        // Search filter behavior
+        searchField.textProperty().addListener((o, ov, nv) -> {
+            String q = nv == null ? "" : nv.trim().toLowerCase();
+            recordingsFiltered.setPredicate(rec -> {
+                if (q.isEmpty()) return true;
+                String name = new java.io.File(rec.filePath()).getName().toLowerCase();
+                String date = rec.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")).toLowerCase();
+                return name.contains(q) || date.contains(q);
+            });
+        });
+        // Sort behavior
+        sortCombo.valueProperty().addListener((o, ov, nv) -> recordingsSorted.setComparator(comparatorFor(nv)));
+        recordingsSorted.setComparator(comparatorFor(sortCombo.getValue()));
         recordingsList.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(Recording item, boolean empty) {
@@ -325,7 +365,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
         loadRecordings();
         
         content.getChildren().addAll(statusLabel, timerLabel, /*levelMeter,*/ spectrumCanvas, micHealthLabel, deviceBox, recordButton, micGainBox,
-            recordingsLabel, recordingsList, playbackBar, waveformCanvas);
+            recordingsLabel, searchSortBar, recordingsList, playbackBar, waveformCanvas);
         
         getDialogPane().setContent(content);
         if (cssUrl != null) getDialogPane().getStylesheets().add(cssUrl);
@@ -483,7 +523,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private void loadRecordings() {
         try {
             List<Recording> list = recordingService.getAllRecordings();
-            recordingsList.getItems().setAll(list);
+            recordingsMaster.setAll(list);
         } catch (Exception e) {
             // keep silent in UI; optional toast could be added
         }
@@ -737,6 +777,41 @@ public class RecordingDialog extends Dialog<ButtonType> {
             if (target == null && !newDevices.isEmpty()) target = newDevices.get(0);
             if (target != null) deviceCombo.getSelectionModel().select(target);
         } catch (Exception ignored) { }
+    }
+
+    private Comparator<Recording> comparatorFor(String mode) {
+        String m = mode == null ? "Newest first" : mode;
+        switch (m) {
+            case "Oldest first":
+                return (a, b) -> a.createdAt().compareTo(b.createdAt());
+            case "Name A-Z":
+                return (a, b) -> new java.io.File(a.filePath()).getName().toLowerCase()
+                        .compareTo(new java.io.File(b.filePath()).getName().toLowerCase());
+            case "Name Z-A":
+                return (a, b) -> new java.io.File(b.filePath()).getName().toLowerCase()
+                        .compareTo(new java.io.File(a.filePath()).getName().toLowerCase());
+            case "Duration longest":
+                return (a, b) -> {
+                    Integer da = a.durationSeconds();
+                    Integer db = b.durationSeconds();
+                    if (da == null && db == null) return 0;
+                    if (da == null) return 1; // null last
+                    if (db == null) return -1;
+                    return Integer.compare(db, da); // descending
+                };
+            case "Duration shortest":
+                return (a, b) -> {
+                    Integer da = a.durationSeconds();
+                    Integer db = b.durationSeconds();
+                    if (da == null && db == null) return 0;
+                    if (da == null) return 1; // null last
+                    if (db == null) return -1;
+                    return Integer.compare(da, db); // ascending
+                };
+            case "Newest first":
+            default:
+                return (a, b) -> b.createdAt().compareTo(a.createdAt());
+        }
     }
 
     private Image loadIcon(String name) {
