@@ -153,10 +153,12 @@ public class CategoryCard extends VBox {
         grid.setPadding(new Insets(20));
 
         TextField titleField = new TextField();
+        titleField.setStyle("-fx-background-color: #5a4a3a; -fx-control-inner-background: #2e2e2e; -fx-text-fill: #f4e4c1;");
 
         TextArea noteArea = new TextArea();
         noteArea.setPrefRowCount(4);
         noteArea.setWrapText(true);
+        noteArea.setStyle("-fx-background-color: #5a4a3a; -fx-control-inner-background: #2e2e2e; -fx-text-fill: #f4e4c1;");
 
         // Block image preview
         Image blockImg = null;
@@ -181,9 +183,9 @@ public class CategoryCard extends VBox {
         GridPane.setHalignment(preview, HPos.CENTER);
         grid.add(preview, 0, 0);
         Label titleLbl = new Label("Title:");
-        titleLbl.setStyle("-fx-text-fill: #ffffff;");
+        titleLbl.setStyle("-fx-text-fill: #d4c4a1;");
         Label descLbl = new Label("Description:");
-        descLbl.setStyle("-fx-text-fill: #ffffff;");
+        descLbl.setStyle("-fx-text-fill: #d4c4a1;");
         grid.add(titleLbl, 0, 1);
         grid.add(titleField, 1, 1);
         grid.add(descLbl, 0, 2);
@@ -204,6 +206,24 @@ public class CategoryCard extends VBox {
         if (css != null) {
             dialog.getDialogPane().getStylesheets().add(css);
         }
+        // Match Create Category dialog styling
+        dialog.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        Button okBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        if (okBtn != null) {
+            okBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        }
+        Button cancelBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+        if (cancelBtn != null) {
+            cancelBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        }
+        dialog.setOnShown(ev -> {
+            javafx.scene.Node header = dialog.getDialogPane().lookup(".header-panel");
+            if (header != null) header.setStyle("-fx-background-color: #5a4a3a;");
+            javafx.scene.Node contentReg = dialog.getDialogPane().lookup(".content");
+            if (contentReg != null) contentReg.setStyle("-fx-background-color: #3a2f27;");
+            javafx.scene.Node buttonBar = dialog.getDialogPane().lookup(".button-bar");
+            if (buttonBar != null) buttonBar.setStyle("-fx-background-color: #5a4a3a;");
+        });
         
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
@@ -223,6 +243,20 @@ public class CategoryCard extends VBox {
                     success.setHeaderText(null);
                     success.setContentText("Block added to " + category.name() + "!");
                     if (css != null) success.getDialogPane().getStylesheets().add(css);
+                    // Match Create Category dialog visual style
+                    success.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+                    Button okBtn2 = (Button) success.getDialogPane().lookupButton(ButtonType.OK);
+                    if (okBtn2 != null) {
+                        okBtn2.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+                    }
+                    success.setOnShown(ev2 -> {
+                        javafx.scene.Node header2 = success.getDialogPane().lookup(".header-panel");
+                        if (header2 != null) header2.setStyle("-fx-background-color: #5a4a3a;");
+                        javafx.scene.Node contentReg2 = success.getDialogPane().lookup(".content");
+                        if (contentReg2 != null) contentReg2.setStyle("-fx-background-color: #3a2f27;");
+                        javafx.scene.Node buttonBar2 = success.getDialogPane().lookup(".button-bar");
+                        if (buttonBar2 != null) buttonBar2.setStyle("-fx-background-color: #5a4a3a;");
+                    });
                     success.showAndWait();
                 } catch (Exception e) {
                     Alert error = new Alert(Alert.AlertType.ERROR, "Failed to add block: " + e.getMessage());
