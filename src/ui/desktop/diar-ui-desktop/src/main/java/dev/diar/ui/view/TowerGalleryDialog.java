@@ -6,6 +6,7 @@ import dev.diar.core.model.LogEntry;
 import dev.diar.core.model.Tower;
 import dev.diar.ui.ApplicationContext;
 import javafx.geometry.Insets;
+import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Bounds;
@@ -15,6 +16,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.Region;
@@ -74,7 +76,8 @@ public class TowerGalleryDialog extends Stage {
 
         // Left: towers list
         towersList = new ListView<>();
-        towersList.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1;");
+        towersList.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1; " +
+                "-fx-selection-bar: #FFC107; -fx-selection-bar-non-focused: #E0B000; -fx-selection-bar-text: #3a2f27;");
         towersList.setPrefWidth(260);
         towersList.setCellFactory(lv -> new ListCell<>() {
             @Override
@@ -115,7 +118,8 @@ public class TowerGalleryDialog extends Stage {
         blockFilterField.setPromptText("Filter blocks...");
         blockFilterField.textProperty().addListener((obs, ov, nv) -> applyBlockFilter());
         blockListView = new ListView<>();
-        blockListView.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1;");
+        blockListView.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1; " +
+                "-fx-selection-bar: #FFC107; -fx-selection-bar-non-focused: #E0B000; -fx-selection-bar-text: #3a2f27;");
         blockListView.setPrefWidth(300);
         blockListView.setCellFactory(lv -> new ListCell<>(){
             @Override
@@ -386,19 +390,95 @@ public class TowerGalleryDialog extends Stage {
     }
 
     private void showBlockDialog(int index, LogEntry entry) {
-        Dialog<ButtonType> dlg = new Dialog<>();
-        dlg.setTitle("Block #" + index);
-        dlg.setHeaderText(entry.createdAt().toLocalDateTime().toString().replace('T',' '));
-        String note = entry.note() != null ? entry.note() : "(No note)";
-        TextArea ta = new TextArea(note);
-        ta.setEditable(false);
-        ta.setWrapText(true);
-        ta.setPrefRowCount(6);
-        dlg.getDialogPane().setContent(new VBox(8, new Label("Note:"), ta));
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Block #" + index);
+        dialog.setHeaderText(entry.createdAt().toLocalDateTime().toString().replace('T',' '));
+
+        // Parse note into title and body similar to Add Block UX
+        String raw = entry.note() != null ? entry.note() : "";
+        String title = "";
+        String body = "";
+        if (!raw.isBlank()) {
+            String[] lines = raw.split("\\R");
+            boolean usedTitle = false;
+            StringBuilder rest = new StringBuilder();
+            for (String ln : lines) {
+                String t = ln.trim();
+                if (!usedTitle && !t.isEmpty()) { title = t; usedTitle = true; }
+                else { rest.append(ln).append('\n'); }
+            }
+            body = rest.toString().trim();
+        }
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
+
+        // Preview uses same logic; use cached blockImage if available
+        ImageView preview = null;
+        if (blockImage != null) {
+            preview = new ImageView(blockImage);
+            preview.setFitWidth(96);
+            preview.setFitHeight(96);
+            preview.setPreserveRatio(true);
+        }
+        if (preview == null) {
+            // draw a placeholder rectangle-like via empty ImageView of fixed size
+            preview = new ImageView();
+            preview.setFitWidth(96);
+            preview.setFitHeight(96);
+        }
+        GridPane.setColumnSpan(preview, 2);
+        GridPane.setHalignment(preview, HPos.CENTER);
+        grid.add(preview, 0, 0);
+
+        Label titleLbl = new Label("Title:");
+        titleLbl.setStyle("-fx-text-fill: #d4c4a1;");
+        TextField titleField = new TextField(title);
+        titleField.setEditable(false);
+        titleField.setStyle("-fx-background-color: #5a4a3a; -fx-control-inner-background: #2e2e2e; -fx-text-fill: #f4e4c1;");
+
+        Label descLbl = new Label("Description:");
+        descLbl.setStyle("-fx-text-fill: #d4c4a1;");
+        TextArea noteArea = new TextArea(body.isEmpty() && title.isEmpty() ? "(No note)" : body);
+        noteArea.setEditable(false);
+        noteArea.setPrefRowCount(6);
+        noteArea.setWrapText(true);
+        noteArea.setStyle("-fx-background-color: #5a4a3a; -fx-control-inner-background: #2e2e2e; -fx-text-fill: #f4e4c1;");
+
+        grid.add(titleLbl, 0, 1);
+        grid.add(titleField, 1, 1);
+        grid.add(descLbl, 0, 2);
+        grid.add(noteArea, 1, 2);
+
+        // Static background like Add Block
+        StackPane container = new StackPane();
+        container.setStyle("-fx-background-image: url('/images/towers.jpg'); -fx-background-size: cover; -fx-background-position: center center; -fx-background-repeat: no-repeat;");
+        grid.setStyle("-fx-background-color: rgba(58,47,39,0.82); -fx-background-radius: 10;");
+        StackPane.setAlignment(grid, Pos.CENTER);
+        container.getChildren().add(grid);
+        dialog.getDialogPane().setContent(container);
+
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
         String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
-        if (css != null) dlg.getDialogPane().getStylesheets().add(css);
-        dlg.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-        dlg.showAndWait();
+        if (css != null) dialog.getDialogPane().getStylesheets().add(css);
+        // Match Create Category dialog styling
+        dialog.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        Button closeBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.CLOSE);
+        if (closeBtn != null) {
+            closeBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        }
+        dialog.setOnShown(ev -> {
+            javafx.scene.Node header = dialog.getDialogPane().lookup(".header-panel");
+            if (header != null) header.setStyle("-fx-background-color: #5a4a3a;");
+            javafx.scene.Node contentReg = dialog.getDialogPane().lookup(".content");
+            if (contentReg != null) contentReg.setStyle("-fx-background-color: #3a2f27;");
+            javafx.scene.Node buttonBar = dialog.getDialogPane().lookup(".button-bar");
+            if (buttonBar != null) buttonBar.setStyle("-fx-background-color: #5a4a3a;");
+        });
+
+        dialog.showAndWait();
     }
 
     private void rerenderSelected() {

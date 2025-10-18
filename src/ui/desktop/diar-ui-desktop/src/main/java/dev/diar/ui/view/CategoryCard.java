@@ -275,6 +275,24 @@ public class CategoryCard extends VBox {
         confirm.getButtonTypes().setAll(ButtonType.CANCEL, ButtonType.OK);
         String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
         if (css != null) confirm.getDialogPane().getStylesheets().add(css);
+        // Match app dialog styling and buttons
+        confirm.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        Button okBtn = (Button) confirm.getDialogPane().lookupButton(ButtonType.OK);
+        if (okBtn != null) {
+            okBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        }
+        Button cancelBtn = (Button) confirm.getDialogPane().lookupButton(ButtonType.CANCEL);
+        if (cancelBtn != null) {
+            cancelBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        }
+        confirm.setOnShown(ev -> {
+            javafx.scene.Node header = confirm.getDialogPane().lookup(".header-panel");
+            if (header != null) header.setStyle("-fx-background-color: #5a4a3a;");
+            javafx.scene.Node contentReg = confirm.getDialogPane().lookup(".content");
+            if (contentReg != null) contentReg.setStyle("-fx-background-color: #3a2f27;");
+            javafx.scene.Node buttonBar = confirm.getDialogPane().lookup(".button-bar");
+            if (buttonBar != null) buttonBar.setStyle("-fx-background-color: #5a4a3a;");
+        });
         confirm.showAndWait().ifPresent(bt -> {
             if (bt == ButtonType.OK) {
                 try {
