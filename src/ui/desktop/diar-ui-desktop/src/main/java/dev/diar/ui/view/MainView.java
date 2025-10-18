@@ -109,6 +109,7 @@ public class MainView extends BorderPane {
         header.setStyle("-fx-background-color: #5a4a3a;");
         
         ImageView logoView = null;
+        ImageView plantView = null;
         try {
             var url = getClass().getResource("/images/walle.png");
             if (url != null) {
@@ -117,6 +118,14 @@ public class MainView extends BorderPane {
                 logoView.setFitWidth(48);
                 logoView.setFitHeight(48);
                 logoView.setPreserveRatio(true);
+            }
+            var plantUrl = getClass().getResource("/images/plant.png");
+            if (plantUrl != null) {
+                Image pimg = new Image(plantUrl.toExternalForm(), 56, 56, true, true);
+                plantView = new ImageView(pimg);
+                plantView.setFitWidth(56);
+                plantView.setFitHeight(56);
+                plantView.setPreserveRatio(true);
             }
         } catch (Exception ignored) { }
         
@@ -127,9 +136,11 @@ public class MainView extends BorderPane {
         HBox titleBox = new HBox(12);
         titleBox.setAlignment(Pos.CENTER);
         if (logoView != null) {
-            titleBox.getChildren().addAll(logoView, titleLabel);
+            if (plantView != null) titleBox.getChildren().addAll(logoView, titleLabel, plantView);
+            else titleBox.getChildren().addAll(logoView, titleLabel);
         } else {
-            titleBox.getChildren().add(titleLabel);
+            if (plantView != null) titleBox.getChildren().addAll(titleLabel, plantView);
+            else titleBox.getChildren().add(titleLabel);
         }
         
         Label subtitleLabel = new Label("Daily Achievement Logger");

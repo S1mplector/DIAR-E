@@ -98,6 +98,26 @@ public class RecordingService {
         return audioCapturePort.isRecording();
     }
 
+    public void setInputGain(double gain) {
+        audioCapturePort.setInputGain(gain);
+    }
+
+    public double getInputGain() {
+        return audioCapturePort.getInputGain();
+    }
+
+    public java.util.List<AudioCapturePort.AudioDevice> listInputDevices() {
+        return audioCapturePort.listInputDevices();
+    }
+
+    public void setInputDevice(String deviceId) {
+        audioCapturePort.setInputDevice(deviceId);
+    }
+
+    public String getInputDevice() {
+        return audioCapturePort.getInputDevice();
+    }
+
     public List<Recording> getAllRecordings() {
         return recordingRepository.findAll();
     }

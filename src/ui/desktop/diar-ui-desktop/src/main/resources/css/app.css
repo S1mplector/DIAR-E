@@ -1,5 +1,4 @@
 .root {
-  -fx-background-color: var(--bg);
   -fx-background-color: #3a2f27;
   /* Global focus/selection theme */
   -fx-accent: #FFC107; /* affects generic accent + selection in many controls */
@@ -12,38 +11,27 @@
   -fx-highlight-text-fill: #3a2f27;
 }
 
-.label {
-  -fx-text-fill: var(--text);
-}
+.label { -fx-text-fill: #f4e4c1; }
 
 .button.primary {
-  -fx-background-color: var(--accent);
   -fx-background-color: #7a9b8e;
-  -fx-text-fill: var(--text);
   -fx-text-fill: #f4e4c1;
   -fx-font-weight: bold;
   -fx-background-radius: 5;
 }
 
 .button.secondary {
-  -fx-background-color: var(--accent-2);
   -fx-background-color: #9b7a8e;
-  -fx-text-fill: var(--text);
   -fx-text-fill: #f4e4c1;
   -fx-font-weight: bold;
   -fx-background-radius: 5;
 }
 
-.status-bar {
-  -fx-background-color: var(--status-bg);
-  -fx-background-color: #2a1f17;
-}
+.status-bar { -fx-background-color: #2a1f17; }
 
 .card {
-  -fx-background-color: var(--bg-alt);
   -fx-background-color: #5a4a3a;
   -fx-background-radius: 10;
-  -fx-border-color: var(--card-border);
   -fx-border-color: #7a6a5a;
   -fx-border-width: 2;
   -fx-border-radius: 10;
@@ -54,7 +42,6 @@
 .alert .dialog-pane,
 .text-input-dialog .dialog-pane,
 .choice-dialog .dialog-pane {
-  -fx-background-color: var(--bg);
   -fx-background-color: #3a2f27; /* match SettingsDialog panel */
   /* drive default control styling like SettingsDialog does */
   -fx-base: #3a2f27;
@@ -73,20 +60,15 @@
 .dialog-pane .content,
 .dialog-pane .expandable-content,
 .dialog-pane > *.graphic-container {
-  -fx-background-color: var(--bg);
   -fx-background-color: #3a2f27;
 }
 .dialog-pane .label,
 .dialog-pane .header-panel .label {
-  -fx-text-fill: var(--text-dim);
   -fx-text-fill: #d4c4a1;
 }
 /* Button bar area at the bottom of dialogs */
 .dialog-pane .button-bar,
-.dialog-pane .button-bar > .container {
-  -fx-background-color: var(--bg-alt);
-  -fx-background-color: #5a4a3a;
-}
+.dialog-pane .button-bar > .container { -fx-background-color: #5a4a3a; }
 /* Buttons in dialogs: reuse SettingsDialog neutral button color */
 .dialog-pane .button {
   -fx-background-color: -fx-base; /* same brown as panel */
@@ -109,12 +91,10 @@
 
 /* Inputs */
 .text-field, .text-area, .password-field, .combo-box-base, .spinner, .choice-box {
-  -fx-background-color: var(--bg-alt);
   -fx-background-color: #5a4a3a;
   -fx-control-inner-background: #2e2e2e;
-  -fx-text-fill: var(--text);
   -fx-text-fill: #f4e4c1;
-  -fx-prompt-text-fill: derive(var(--text-dim), -30%);
+  -fx-prompt-text-fill: derive(#d4c4a1, -30%);
 }
 .spinner .text-field {
   -fx-background-color: #5a4a3a;
@@ -133,14 +113,9 @@
 }
 
 /* Lists */
-.list-view {
-  -fx-background-color: var(--bg);
-  -fx-background-color: #3a2f27;
-}
+.list-view { -fx-background-color: #3a2f27; }
 .list-cell {
-  -fx-background-color: var(--bg);
   -fx-background-color: #3a2f27;
-  -fx-text-fill: var(--text);
   -fx-text-fill: #f4e4c1;
 }
 .list-cell:filled:selected, .list-cell:filled:selected:hover {
@@ -179,19 +154,23 @@
 }
 
 /* Menus */
-.menu-bar {
-  -fx-background-color: var(--bg-alt);
-  -fx-background-color: #5a4a3a;
-}
+.menu-bar { -fx-background-color: #5a4a3a; }
 .context-menu {
-  -fx-background-color: var(--bg-alt);
   -fx-background-color: #5a4a3a;
-  -fx-text-fill: var(--text);
   -fx-text-fill: #f4e4c1;
 }
-.menu-item .label {
-  -fx-text-fill: var(--text);
-  -fx-text-fill: #f4e4c1;
+.menu-item .label { -fx-text-fill: #f4e4c1; }
+
+/* Context menu selection highlight (remove default blue) */
+.context-menu .menu-item:focused,
+.context-menu .menu-item:armed,
+.context-menu .menu-item:hover {
+  -fx-background-color: #FFC107;
+}
+.context-menu .menu-item:focused .label,
+.context-menu .menu-item:armed .label,
+.context-menu .menu-item:hover .label {
+  -fx-text-fill: #3a2f27;
 }
 
 /* ComboBox popup & cells */
@@ -232,16 +211,11 @@
 }
 
 /* ToolBar */
-.tool-bar {
-  -fx-background-color: var(--bg-alt);
-  -fx-background-color: #5a4a3a;
-}
+.tool-bar { -fx-background-color: #5a4a3a; }
 
 /* ToolTip */
 .tooltip {
-  -fx-background-color: var(--bg-alt);
   -fx-background-color: #5a4a3a;
-  -fx-text-fill: var(--text);
   -fx-text-fill: #f4e4c1;
   -fx-background-radius: 6;
 }
@@ -267,9 +241,7 @@
 }
 
 /* Separator */
-.separator *.line {
-  -fx-background-color: var(--card-border);
-}
+.separator *.line { -fx-background-color: #7a6a5a; }
 
 /* Slider */
 .slider .track {

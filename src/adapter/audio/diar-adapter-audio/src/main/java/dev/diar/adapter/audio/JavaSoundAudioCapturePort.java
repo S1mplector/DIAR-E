@@ -6,6 +6,8 @@ import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -15,6 +17,9 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
     private TargetDataLine line;
     private Thread recordingThread;
     private ByteArrayOutputStream audioData;
+    private volatile double inputGain = 1.0; // 1.0 = unity
+    private volatile String inputDeviceId = "default";
+    private volatile Mixer.Info selectedMixerInfo = null;
 
     @Override
     public void startRecording(Path targetFile, Consumer<Double> levelMeterCallback) {
@@ -33,7 +38,12 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
             if (!AudioSystem.isLineSupported(info)) {
                 throw new RuntimeException("Audio line not supported for 16kHz/16-bit mono");
             }
-            line = (TargetDataLine) AudioSystem.getLine(info);
+            if (selectedMixerInfo != null) {
+                Mixer m = AudioSystem.getMixer(selectedMixerInfo);
+                line = (TargetDataLine) m.getLine(info);
+            } else {
+                line = (TargetDataLine) AudioSystem.getLine(info);
+            }
             line.open(format);
             line.start();
         } catch (Exception openEx) {
@@ -47,6 +57,8 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
                 while (recording.get()) {
                     int bytesRead = line.read(buffer, 0, buffer.length);
                     if (bytesRead > 0) {
+                        // Apply input gain to little-endian 16-bit samples in-place
+                        applyGainInPlace(buffer, bytesRead);
                         audioData.write(buffer, 0, bytesRead);
 
                         // Calculate audio level for meter callback
@@ -99,6 +111,8 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
                 while (recording.get()) {
                     int bytesRead = line.read(buffer, 0, buffer.length);
                     if (bytesRead > 0) {
+                        // Apply input gain to samples before saving/analysis
+                        applyGainInPlace(buffer, bytesRead);
                         audioData.write(buffer, 0, bytesRead);
 
                         double level = calculateRMSLevel(buffer, bytesRead);
@@ -182,6 +196,69 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
         return recording.get();
     }
     
+    @Override
+    public void setInputGain(double gain) {
+        // Clamp to a safe range [0.5, 8.0]
+        if (Double.isNaN(gain) || Double.isInfinite(gain)) return;
+        double g = Math.max(0.5, Math.min(8.0, gain));
+        this.inputGain = g;
+    }
+
+    @Override
+    public double getInputGain() {
+        return inputGain;
+    }
+    
+    @Override
+    public List<AudioDevice> listInputDevices() {
+        List<AudioDevice> res = new ArrayList<>();
+        res.add(new AudioDevice("default", "System Default"));
+        Mixer.Info[] infos = AudioSystem.getMixerInfo();
+        for (int i = 0; i < infos.length; i++) {
+            Mixer.Info mi = infos[i];
+            try {
+                Mixer m = AudioSystem.getMixer(mi);
+                Line.Info[] targets = m.getTargetLineInfo(new DataLine.Info(TargetDataLine.class, new AudioFormat(16000,16,1,true,false)));
+                if (targets != null && targets.length > 0) {
+                    String id = "mixer:" + i;
+                    String name = mi.getName();
+                    String vend = mi.getVendor();
+                    if (vend != null && !vend.isBlank()) name = name + " (" + vend + ")";
+                    res.add(new AudioDevice(id, name));
+                }
+            } catch (Exception ignored) {}
+        }
+        return res;
+    }
+
+    @Override
+    public void setInputDevice(String deviceId) {
+        if (deviceId == null || deviceId.isBlank() || deviceId.equals("default")) {
+            this.inputDeviceId = "default";
+            this.selectedMixerInfo = null;
+            return;
+        }
+        if (deviceId.startsWith("mixer:")) {
+            try {
+                int idx = Integer.parseInt(deviceId.substring("mixer:".length()));
+                Mixer.Info[] infos = AudioSystem.getMixerInfo();
+                if (idx >= 0 && idx < infos.length) {
+                    this.selectedMixerInfo = infos[idx];
+                    this.inputDeviceId = deviceId;
+                    return;
+                }
+            } catch (Exception ignored) {}
+        }
+        // fallback
+        this.inputDeviceId = "default";
+        this.selectedMixerInfo = null;
+    }
+
+    @Override
+    public String getInputDevice() {
+        return inputDeviceId;
+    }
+    
     private double calculateRMSLevel(byte[] buffer, int length) {
         long sum = 0;
         for (int i = 0; i < length - 1; i += 2) {
@@ -191,6 +268,19 @@ public class JavaSoundAudioCapturePort implements AudioCapturePort {
         double rms = Math.sqrt((double) sum / (length / 2));
         // Calibrate to 0.0 - 1.0 with higher sensitivity
         return Math.min(1.0, rms / 6000.0);
+    }
+    
+    private void applyGainInPlace(byte[] buffer, int length) {
+        double g = this.inputGain;
+        if (Math.abs(g - 1.0) < 1e-6) return; // fast path
+        for (int i = 0; i < length - 1; i += 2) {
+            short s = (short) ((buffer[i + 1] << 8) | (buffer[i] & 0xFF));
+            int v = (int) Math.round(s * g);
+            if (v > Short.MAX_VALUE) v = Short.MAX_VALUE;
+            else if (v < Short.MIN_VALUE) v = Short.MIN_VALUE;
+            buffer[i] = (byte) (v & 0xFF);
+            buffer[i + 1] = (byte) ((v >>> 8) & 0xFF);
+        }
     }
     
     private void writeWavFile(File file, byte[] audioData, AudioFormat format) throws Exception {

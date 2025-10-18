@@ -1,6 +1,7 @@
 package dev.diar.ui.view;
 
 import dev.diar.app.service.RecordingService;
+import dev.diar.app.port.AudioCapturePort.AudioDevice;
 import dev.diar.core.model.Recording;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -49,6 +50,10 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private String cssUrl;
     private Canvas spectrumCanvas;
     private volatile float[] spectrumBins;
+    private Slider micGainSlider;
+    private Label micGainValue;
+    private Label micHealthLabel;
+    private ComboBox<AudioDevice> deviceCombo;
 
     public RecordingDialog(RecordingService recordingService) {
         this.recordingService = recordingService;
@@ -77,15 +82,74 @@ public class RecordingDialog extends Dialog<ButtonType> {
         levelMeter = new ProgressBar(0);
         levelMeter.setPrefWidth(300);
         levelMeter.setStyle("-fx-accent: #7a9b8e;");
+        // Hide the idle sensitivity bar entirely
+        levelMeter.setVisible(false);
+        levelMeter.setManaged(false);
 
         // Live spectrum (shown during recording)
         spectrumCanvas = new Canvas(420, 120);
         spectrumCanvas.setVisible(false);
+        micHealthLabel = new Label("");
+        micHealthLabel.setTextFill(Color.web("#d4c4a1"));
+        micHealthLabel.setVisible(false);
         
         // Load icons
         imgRecord = loadIcon("record.png");
         imgPlay = loadIcon("play.png");
         imgPause = loadIcon("pause.png");
+
+        // Mic input gain (sensitivity) slider UI
+        Label micGainLabel = new Label("Mic Boost");
+        micGainLabel.setTextFill(Color.web("#f4e4c1"));
+        double initialGain;
+        try { initialGain = recordingService.getInputGain(); } catch (Exception ex) { initialGain = 1.0; }
+        micGainSlider = new Slider(0.5, 8.0, initialGain);
+        micGainSlider.getStyleClass().add("walle-slider");
+        micGainSlider.setPrefWidth(220);
+        micGainSlider.setBlockIncrement(0.1);
+        micGainValue = new Label(formatGain(initialGain));
+        micGainValue.setTextFill(Color.web("#d4c4a1"));
+        micGainSlider.valueProperty().addListener((o, ov, nv) -> {
+            double g = nv.doubleValue();
+            recordingService.setInputGain(g);
+            micGainValue.setText(formatGain(g));
+        });
+        HBox micGainBox = new HBox(10, micGainLabel, micGainSlider, micGainValue);
+        micGainBox.setAlignment(Pos.CENTER);
+        micGainBox.setStyle("-fx-background-color: #3a2f27;");
+
+        // Input device selector
+        Label devLabel = new Label("Input Device");
+        devLabel.setTextFill(Color.web("#f4e4c1"));
+        deviceCombo = new ComboBox<>();
+        deviceCombo.setPrefWidth(280);
+        deviceCombo.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(AudioDevice it, boolean empty) {
+                super.updateItem(it, empty);
+                setText(empty || it == null ? null : it.name());
+            }
+        });
+        deviceCombo.setButtonCell(new ListCell<>() {
+            @Override protected void updateItem(AudioDevice it, boolean empty) {
+                super.updateItem(it, empty);
+                setText(empty || it == null ? null : it.name());
+            }
+        });
+        try {
+            java.util.List<AudioDevice> devices = recordingService.listInputDevices();
+            deviceCombo.getItems().setAll(devices);
+            String cur = recordingService.getInputDevice();
+            AudioDevice sel = devices.stream().filter(d -> d.id().equals(cur)).findFirst().orElse(devices.isEmpty()?null:devices.get(0));
+            if (sel != null) deviceCombo.getSelectionModel().select(sel);
+        } catch (Exception ignored) { }
+        deviceCombo.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> {
+            if (nv != null) {
+                try { recordingService.setInputDevice(nv.id()); } catch (Exception ignored) { }
+            }
+        });
+        HBox deviceBox = new HBox(10, devLabel, deviceCombo);
+        deviceBox.setAlignment(Pos.CENTER);
+        deviceBox.setStyle("-fx-background-color: #3a2f27;");
 
         recordButton = new Button(imgRecord != null ? "" : "Record");
         if (imgRecord != null) recordButton.setGraphic(iconView(imgRecord, 36));
@@ -244,7 +308,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
 
         loadRecordings();
         
-        content.getChildren().addAll(statusLabel, timerLabel, levelMeter, spectrumCanvas, recordButton,
+        content.getChildren().addAll(statusLabel, timerLabel, /*levelMeter,*/ spectrumCanvas, micHealthLabel, deviceBox, recordButton, micGainBox,
             recordingsLabel, recordingsList, playbackBar, waveformCanvas);
         
         getDialogPane().setContent(content);
@@ -285,7 +349,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private void startRecording() {
         try {
             currentRecordingId = recordingService.startRecordingWithSpectrum(level -> {
-                javafx.application.Platform.runLater(() -> levelMeter.setProgress(level));
+                // no-op: sensitivity bar removed from UI
             }, bins -> {
                 // called from capture thread
                 this.spectrumBins = bins;
@@ -295,8 +359,9 @@ public class RecordingDialog extends Dialog<ButtonType> {
             statusLabel.setText("Recording... 🎤");
             statusLabel.setTextFill(Color.RED);
             recordButton.setTooltip(new Tooltip("Stop Recording"));
-            levelMeter.setVisible(false);
             spectrumCanvas.setVisible(true);
+            micHealthLabel.setVisible(true);
+            if (deviceCombo != null) deviceCombo.setDisable(true);
             
             elapsedSeconds = 0;
             timer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -322,10 +387,10 @@ public class RecordingDialog extends Dialog<ButtonType> {
             statusLabel.setText("Recording saved!");
             statusLabel.setTextFill(Color.GREEN);
             recordButton.setTooltip(new Tooltip("Start Recording"));
-            levelMeter.setProgress(0);
-            levelMeter.setVisible(true);
             spectrumCanvas.setVisible(false);
+            micHealthLabel.setVisible(false);
             spectrumBins = null;
+            if (deviceCombo != null) deviceCombo.setDisable(false);
             
             Alert success = new Alert(Alert.AlertType.INFORMATION);
             success.setTitle("Recording Saved");
@@ -561,11 +626,32 @@ public class RecordingDialog extends Dialog<ButtonType> {
         double bw = Math.max(2, w / (n * 1.2));
         double gap = Math.max(1, bw * 0.2);
         g.setFill(Color.web("#FFC107"));
+        double peak = 0.0;
         for (int i = 0; i < n; i++) {
             double x = i * (bw + gap) + gap * 0.5;
             double mag = Math.min(1.0, Math.max(0.0, bins[i])) * (h - 8);
             g.fillRoundRect(x, h - mag - 4, bw, mag, 3, 3);
+            if (bins[i] > peak) peak = bins[i];
         }
+        if (micHealthLabel != null) {
+            String txt;
+            Color col;
+            if (peak < 0.25) { txt = "Level: Low"; col = Color.web("#d4c4a1"); }
+            else if (peak > 0.9) { txt = "Level: Clipping"; col = Color.web("#c74440"); }
+            else { txt = "Level: Healthy"; col = Color.web("#7a9b8e"); }
+            micHealthLabel.setText(txt + String.format("  (peak %.0f%%)", peak * 100));
+            micHealthLabel.setTextFill(col);
+        }
+    }
+
+    private void updatePauseButtonIcon() {
+        if (pauseButton == null) return;
+        if (imgPause != null) pauseButton.setGraphic(iconView(imgPause, 36));
+        pauseButton.setTooltip(new Tooltip("Pause"));
+    }
+
+    private String formatGain(double g) {
+        return String.format("x%.2f", g);
     }
 
     private void togglePause() {
@@ -578,12 +664,6 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 stopVisualizer();
             }
         } catch (Exception ignored) { }
-    }
-
-    private void updatePauseButtonIcon() {
-        if (pauseButton == null) return;
-        if (imgPause != null) pauseButton.setGraphic(iconView(imgPause, 36));
-        pauseButton.setTooltip(new Tooltip("Pause"));
     }
 
     private Image loadIcon(String name) {
