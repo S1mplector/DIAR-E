@@ -16,6 +16,7 @@ dev\diar\app\service\TowerViewService.class
 dev\diar\app\service\SettingsService.class
 dev\diar\app\service\MorningRoutineCoordinator.class
 dev\diar\app\service\StatisticsService.class
+dev\diar\app\port\AudioCapturePort$AudioDevice.class
 dev\diar\app\port\SettingsRepository.class
 dev\diar\app\port\TowerRepository.class
 dev\diar\app\service\SystemClock.class
