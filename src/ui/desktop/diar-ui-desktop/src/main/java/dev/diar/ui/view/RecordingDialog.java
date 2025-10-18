@@ -19,6 +19,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
+import javafx.stage.Stage;
 
 import javax.sound.sampled.*;
 import java.io.File;
@@ -54,6 +55,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private Label micGainValue;
     private Label micHealthLabel;
     private ComboBox<AudioDevice> deviceCombo;
+    private Timeline deviceRefreshTimer;
 
     public RecordingDialog(RecordingService recordingService) {
         this.recordingService = recordingService;
@@ -65,11 +67,12 @@ public class RecordingDialog extends Dialog<ButtonType> {
         setHeaderText("Record your thoughts and reflections");
         cssUrl = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
         
-        VBox content = new VBox(15);
+        VBox content = new VBox(12);
         content.setPadding(new Insets(20));
         content.setAlignment(Pos.CENTER);
-        content.setPrefWidth(400);
+        content.setPrefWidth(360);
         content.setStyle("-fx-background-color: #3a2f27;");
+        content.setMaxWidth(360);
         
         statusLabel = new Label("Ready to record");
         statusLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
@@ -87,11 +90,13 @@ public class RecordingDialog extends Dialog<ButtonType> {
         levelMeter.setManaged(false);
 
         // Live spectrum (shown during recording)
-        spectrumCanvas = new Canvas(420, 120);
+        spectrumCanvas = new Canvas(360, 120);
         spectrumCanvas.setVisible(false);
+        spectrumCanvas.setManaged(false);
         micHealthLabel = new Label("");
         micHealthLabel.setTextFill(Color.web("#d4c4a1"));
         micHealthLabel.setVisible(false);
+        micHealthLabel.setManaged(false);
         
         // Load icons
         imgRecord = loadIcon("record.png");
@@ -117,12 +122,13 @@ public class RecordingDialog extends Dialog<ButtonType> {
         HBox micGainBox = new HBox(10, micGainLabel, micGainSlider, micGainValue);
         micGainBox.setAlignment(Pos.CENTER);
         micGainBox.setStyle("-fx-background-color: #3a2f27;");
+        micGainBox.setMaxWidth(360);
 
         // Input device selector
         Label devLabel = new Label("Input Device");
         devLabel.setTextFill(Color.web("#f4e4c1"));
         deviceCombo = new ComboBox<>();
-        deviceCombo.setPrefWidth(280);
+        deviceCombo.setPrefWidth(220);
         deviceCombo.setCellFactory(lv -> new ListCell<>() {
             @Override protected void updateItem(AudioDevice it, boolean empty) {
                 super.updateItem(it, empty);
@@ -147,9 +153,15 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 try { recordingService.setInputDevice(nv.id()); } catch (Exception ignored) { }
             }
         });
-        HBox deviceBox = new HBox(10, devLabel, deviceCombo);
+        Button devRefreshBtn = new Button("\u21BB"); // ↻
+        devRefreshBtn.setBackground(Background.EMPTY);
+        devRefreshBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        devRefreshBtn.setTooltip(new Tooltip("Refresh devices"));
+        devRefreshBtn.setOnAction(ev -> refreshDeviceList(true));
+        HBox deviceBox = new HBox(10, devLabel, deviceCombo, devRefreshBtn);
         deviceBox.setAlignment(Pos.CENTER);
         deviceBox.setStyle("-fx-background-color: #3a2f27;");
+        deviceBox.setMaxWidth(360);
 
         recordButton = new Button(imgRecord != null ? "" : "Record");
         if (imgRecord != null) recordButton.setGraphic(iconView(imgRecord, 36));
@@ -170,6 +182,8 @@ public class RecordingDialog extends Dialog<ButtonType> {
         recordingsList.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1; " +
                 "-fx-selection-bar: #FFC107; -fx-selection-bar-non-focused: #E0B000; -fx-selection-bar-text: #3a2f27;");
         recordingsList.setPrefHeight(180);
+        recordingsList.setPrefWidth(360);
+        recordingsList.setMaxWidth(360);
         recordingsList.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(Recording item, boolean empty) {
@@ -300,9 +314,11 @@ public class RecordingDialog extends Dialog<ButtonType> {
 
         ToolBar playbackBar = new ToolBar(playButton, pauseButton, new Separator(), volLabel, volumeSlider);
         playbackBar.setStyle("-fx-background-color: #3a2f27;");
+        playbackBar.setPrefWidth(360);
+        playbackBar.setMaxWidth(360);
 
         // Waveform canvas
-        waveformCanvas = new Canvas(420, 100);
+        waveformCanvas = new Canvas(360, 100);
         waveformCanvas.widthProperty().addListener((o, ov, nv) -> renderVisualizer());
         waveformCanvas.heightProperty().addListener((o, ov, nv) -> renderVisualizer());
 
@@ -316,6 +332,9 @@ public class RecordingDialog extends Dialog<ButtonType> {
         getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         // Dialog theming and buttons
         getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        getDialogPane().setPrefWidth(380);
+        getDialogPane().setMinWidth(Region.USE_PREF_SIZE);
+        getDialogPane().setMaxWidth(Region.USE_PREF_SIZE);
         Button closeBtn = (Button) getDialogPane().lookupButton(ButtonType.CLOSE);
         if (closeBtn != null) closeBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
         this.setOnShown(evv -> {
@@ -325,6 +344,17 @@ public class RecordingDialog extends Dialog<ButtonType> {
             if (contentReg != null) contentReg.setStyle("-fx-background-color: #3a2f27;");
             javafx.scene.Node buttonBar = getDialogPane().lookup(".button-bar");
             if (buttonBar != null) buttonBar.setStyle("-fx-background-color: #5a4a3a;");
+            // Start device hot-plug polling
+            refreshDeviceList(true);
+            if (deviceRefreshTimer == null) {
+                deviceRefreshTimer = new Timeline(new KeyFrame(Duration.seconds(2), e -> refreshDeviceList(true)));
+                deviceRefreshTimer.setCycleCount(Timeline.INDEFINITE);
+                deviceRefreshTimer.play();
+            }
+            try {
+                Stage st = (Stage) getDialogPane().getScene().getWindow();
+                if (st != null) st.sizeToScene();
+            } catch (Exception ignored) {}
         });
         
         this.setOnCloseRequest(e -> {
@@ -335,6 +365,10 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 timer.stop();
             }
             stopPlayback();
+            if (deviceRefreshTimer != null) {
+                deviceRefreshTimer.stop();
+                deviceRefreshTimer = null;
+            }
         });
     }
 
@@ -360,7 +394,9 @@ public class RecordingDialog extends Dialog<ButtonType> {
             statusLabel.setTextFill(Color.RED);
             recordButton.setTooltip(new Tooltip("Stop Recording"));
             spectrumCanvas.setVisible(true);
+            spectrumCanvas.setManaged(true);
             micHealthLabel.setVisible(true);
+            micHealthLabel.setManaged(true);
             if (deviceCombo != null) deviceCombo.setDisable(true);
             
             elapsedSeconds = 0;
@@ -388,7 +424,9 @@ public class RecordingDialog extends Dialog<ButtonType> {
             statusLabel.setTextFill(Color.GREEN);
             recordButton.setTooltip(new Tooltip("Start Recording"));
             spectrumCanvas.setVisible(false);
+            spectrumCanvas.setManaged(false);
             micHealthLabel.setVisible(false);
+            micHealthLabel.setManaged(false);
             spectrumBins = null;
             if (deviceCombo != null) deviceCombo.setDisable(false);
             
@@ -663,6 +701,41 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 updatePauseButtonIcon();
                 stopVisualizer();
             }
+        } catch (Exception ignored) { }
+    }
+
+    private void refreshDeviceList(boolean keepSelection) {
+        if (deviceCombo == null) return;
+        try {
+            java.util.List<AudioDevice> newDevices = recordingService.listInputDevices();
+            var items = deviceCombo.getItems();
+            boolean same = items.size() == newDevices.size();
+            if (same) {
+                for (int i = 0; i < items.size(); i++) {
+                    AudioDevice a = items.get(i);
+                    AudioDevice b = newDevices.get(i);
+                    if (a == null || b == null || !a.id().equals(b.id()) || !a.name().equals(b.name())) { same = false; break; }
+                }
+            }
+            String selId = null;
+            if (keepSelection) {
+                var sel = deviceCombo.getSelectionModel().getSelectedItem();
+                if (sel != null) selId = sel.id();
+            } else {
+                selId = recordingService.getInputDevice();
+            }
+            if (!same) {
+                deviceCombo.getItems().setAll(newDevices);
+            }
+            AudioDevice target = null;
+            if (selId != null) {
+                for (AudioDevice d : newDevices) { if (d.id().equals(selId)) { target = d; break; } }
+            }
+            if (target == null) {
+                for (AudioDevice d : newDevices) { if ("default".equals(d.id())) { target = d; break; } }
+            }
+            if (target == null && !newDevices.isEmpty()) target = newDevices.get(0);
+            if (target != null) deviceCombo.getSelectionModel().select(target);
         } catch (Exception ignored) { }
     }
 
