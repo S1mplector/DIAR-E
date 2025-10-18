@@ -427,14 +427,20 @@ public class TowerGalleryDialog extends Stage {
         if (buildTimeline != null) buildTimeline.stop();
         buildTimeline = new Timeline();
         double d = 28.0;
+        // Ensure a non-zero duration so that even a single block animates in
         for (int i = 0; i < blockNodes.size(); i++) {
             StackPane n = blockNodes.get(i);
-            KeyFrame kf = new KeyFrame(Duration.millis(i * d),
+            double t = (i + 1) * d; // shift by one frame to avoid 0ms-only timelines
+            KeyFrame kf = new KeyFrame(Duration.millis(t),
                 new KeyValue(n.opacityProperty(), 1.0),
                 new KeyValue(n.scaleYProperty(), 1.0),
                 new KeyValue(n.translateYProperty(), 0.0)
             );
             buildTimeline.getKeyFrames().add(kf);
+        }
+        if (blockNodes.size() == 1) {
+            // Add a trailing tiny keyframe to guarantee >0ms total duration on some platforms
+            buildTimeline.getKeyFrames().add(new KeyFrame(Duration.millis(d + 1)));
         }
         if (currentScroll != null) {
             buildTimeline.currentTimeProperty().addListener((o, ov, nv) -> currentScroll.setVvalue(1.0));
