@@ -4,8 +4,8 @@ import dev.diar.app.service.BlockService;
 import dev.diar.app.service.CategoryService;
 import dev.diar.app.service.RecordingService;
 import dev.diar.ui.ApplicationContext;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
+import dev.diar.ui.AppSettings;
+import dev.diar.ui.update.UpdaterService;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -38,11 +38,12 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
-import javafx.util.Duration;
 import java.awt.Desktop;
 import java.nio.file.Path;
 
 public class MainView extends BorderPane {
+    private static final String REPO_OWNER = "S1mplector";
+    private static final String REPO_NAME = "DIAR-E";
     private final CategoryService categoryService;
     private final BlockService blockService;
     private final RecordingService recordingService;
@@ -50,8 +51,7 @@ public class MainView extends BorderPane {
     
     private TilePane categoryGrid;
     private Label statusLabel;
-    private Label energyLabel;
-    private Timeline energyRefreshTimer;
+    private Label versionLabel;
 
     public MainView(CategoryService categoryService, BlockService blockService, RecordingService recordingService, ApplicationContext applicationContext) {
         this.categoryService = categoryService;
@@ -61,6 +61,54 @@ public class MainView extends BorderPane {
         
         setupUI();
         loadCategories();
+    }
+
+    public void checkForUpdates(boolean silent) {
+        String current = getCurrentVersion();
+        var updater = new UpdaterService(REPO_OWNER, REPO_NAME);
+        new Thread(() -> {
+            try {
+                var info = updater.checkLatest(current, false);
+                javafx.application.Platform.runLater(() -> {
+                    if (info.isNewer) {
+                        UpdateDialog dlg = new UpdateDialog(updater, info);
+                        dlg.showAndWait();
+                    } else if (!silent) {
+                        String msg = "Current version: " + current + "\n" +
+                                     "Latest version:  " + info.tag + "\n\n" +
+                                     "You are on the latest version.";
+                        Alert ok = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
+                        ok.setTitle("Updates");
+                        ok.setHeaderText("Updates");
+                        ok.setGraphic(null);
+                        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+                        if (css != null) ok.getDialogPane().getStylesheets().add(css);
+                        // Apply theme colors explicitly to avoid default blue button skin
+                        ok.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
+                        Button okBtn = (Button) ok.getDialogPane().lookupButton(ButtonType.OK);
+                        if (okBtn != null) {
+                            okBtn.setDefaultButton(true);
+                            okBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+                        }
+                        ok.showAndWait();
+                    }
+                });
+            } catch (Exception ex) {
+                if (!silent) {
+                    javafx.application.Platform.runLater(() -> showError("Update check failed: " + ex.getMessage()));
+                }
+            }
+        }, "update-check").start();
+    }
+
+    private String getCurrentVersion() {
+        String ver = null;
+        try {
+            Package p = MainView.class.getPackage();
+            if (p != null) ver = p.getImplementationVersion();
+        } catch (Exception ignored) {}
+        if (ver == null || ver.isBlank()) ver = "dev";
+        return ver;
     }
 
     private void setupUI() {
@@ -80,6 +128,9 @@ public class MainView extends BorderPane {
         // Bottom status bar
         HBox statusBar = createStatusBar();
         setBottom(statusBar);
+
+        // Apply app settings (accent + scale) after controls exist
+        applyAppSettings();
     }
 
     private MenuBar createMenuBar() {
@@ -114,14 +165,18 @@ public class MainView extends BorderPane {
         );
 
         Menu settingsMenu = new Menu("Settings");
+        MenuItem appSettingsItem = new MenuItem("Application...");
+        appSettingsItem.setOnAction(e -> new AppSettingsDialog(this::applyAppSettings));
         MenuItem storageItem = new MenuItem("Storage...");
         storageItem.setOnAction(e -> new SettingsDialog(applicationContext).showAndWait());
-        settingsMenu.getItems().add(storageItem);
+        settingsMenu.getItems().addAll(appSettingsItem, storageItem);
 
         Menu helpMenu = new Menu("Help");
+        MenuItem checkUpdatesItem = new MenuItem("Check for Updates...");
+        checkUpdatesItem.setOnAction(e -> checkForUpdates(false));
         MenuItem aboutItem = new MenuItem("About...");
         aboutItem.setOnAction(e -> showAboutDialog());
-        helpMenu.getItems().addAll(aboutItem);
+        helpMenu.getItems().addAll(checkUpdatesItem, aboutItem);
 
         menuBar.getMenus().addAll(fileMenu, settingsMenu, helpMenu);
         return menuBar;
@@ -214,17 +269,11 @@ public class MainView extends BorderPane {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        energyLabel = new Label("");
-        energyLabel.setTextFill(Color.web("#d4c4a1"));
-        energyLabel.setFont(Font.font("Monospace", 12));
-        updateEnergyLabel();
+        versionLabel = new Label(getVersionInfo());
+        versionLabel.setTextFill(Color.web("#d4c4a1"));
+        versionLabel.setFont(Font.font("Monospace", 12));
 
-        // periodic refresh
-        energyRefreshTimer = new Timeline(new KeyFrame(Duration.seconds(10), e -> updateEnergyLabel()));
-        energyRefreshTimer.setCycleCount(Timeline.INDEFINITE);
-        energyRefreshTimer.play();
-
-        statusBar.getChildren().addAll(statusLabel, spacer, energyLabel);
+        statusBar.getChildren().addAll(statusLabel, spacer, versionLabel);
         return statusBar;
     }
 
@@ -357,10 +406,34 @@ public class MainView extends BorderPane {
         about.setTitle("About");
         about.setHeaderText("DIAR-E");
         about.setContentText("Daily Achievement Logger\nhttps://github.com/S1mplector/DIAR-E");
+        about.setGraphic(null);
         String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
         if (css != null) about.getDialogPane().getStylesheets().add(css);
         about.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
+        Button okBtn = (Button) about.getDialogPane().lookupButton(ButtonType.OK);
+        if (okBtn != null) {
+            okBtn.setDefaultButton(true);
+            okBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
+        }
         about.showAndWait();
+    }
+
+    public void applyAppSettings() {
+        try {
+            var accent = AppSettings.getAccent();
+            String themeVars = "-diar-highlight: " + accent.highlight + "; -diar-highlight-text: " + accent.text + ";";
+            // Keep existing background color and add/override looked-up colors
+            String baseStyle = "-fx-background-color: #3a2f27; ";
+            setStyle(baseStyle + themeVars);
+            if (getScene() != null && getScene().getRoot() != null) {
+                String rs = getScene().getRoot().getStyle();
+                if (rs == null) rs = "";
+                getScene().getRoot().setStyle(rs + " " + themeVars);
+                double scale = AppSettings.getUiScale();
+                getScene().getRoot().setScaleX(scale);
+                getScene().getRoot().setScaleY(scale);
+            }
+        } catch (Exception ignored) {}
     }
 
     private void styleButton(Button button, String bgColor) {
@@ -429,13 +502,15 @@ public class MainView extends BorderPane {
 
     
 
-    private void updateEnergyLabel() {
+    private String getVersionInfo() {
+        String ver = null;
         try {
-            int level = applicationContext.getEnergyService().getLevel();
-            boolean exhausted = applicationContext.getEnergyService().isExhausted();
-            energyLabel.setText("Energy: " + level + "%" + (exhausted ? " (exhausted)" : ""));
-        } catch (Exception ignored) {
-            energyLabel.setText("");
-        }
+            Package p = MainView.class.getPackage();
+            if (p != null) ver = p.getImplementationVersion();
+        } catch (Exception ignored) {}
+        if (ver == null || ver.isBlank()) ver = "dev";
+        String fx = System.getProperty("javafx.runtime.version");
+        String jv = System.getProperty("java.version");
+        return "Version: " + ver + "    JavaFX: " + (fx != null ? fx : "?") + "    Java: " + (jv != null ? jv : "?");
     }
 }

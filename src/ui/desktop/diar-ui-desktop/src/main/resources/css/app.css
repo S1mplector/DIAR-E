@@ -86,8 +86,31 @@
 .dialog-pane .button:armed, .dialog-pane .button:pressed {
   -fx-background-color: #2f251f;
 }
-.dialog-pane .button:default {
-  -fx-background-color: -fx-base; /* keep same fill, let focus ring show */
+.dialog-pane .button:default,
+.dialog-pane .button:default:hover,
+.dialog-pane .button:default:focused,
+.dialog-pane .button:default:armed,
+.dialog-pane .button:default:pressed {
+  -fx-background-color: -fx-base; /* match our neutral button color */
+  -fx-text-fill: #f4e4c1;
+  -fx-background-insets: 0;
+  -fx-background-radius: 6;
+  -fx-border-color: #2a1f17;
+  -fx-border-width: 1;
+}
+
+/* Global override for default buttons (prevent Modena blue) */
+.button:default,
+.button:default:hover,
+.button:default:focused,
+.button:default:armed,
+.button:default:pressed {
+  -fx-background-color: -fx-base;
+  -fx-text-fill: #f4e4c1;
+  -fx-background-insets: 0;
+  -fx-background-radius: 6;
+  -fx-border-color: #2a1f17;
+  -fx-border-width: 1;
 }
 
 /* Inputs */
