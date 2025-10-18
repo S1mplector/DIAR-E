@@ -203,7 +203,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
 
         recordingsList = new ListView<>();
         recordingsList.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1; " +
-                "-fx-selection-bar: #FFC107; -fx-selection-bar-non-focused: #E0B000; -fx-selection-bar-text: #3a2f27;");
+                "-fx-selection-bar: -diar-highlight; -fx-selection-bar-non-focused: derive(-diar-highlight, -10%); -fx-selection-bar-text: -diar-highlight-text;");
         recordingsList.setPrefHeight(180);
         recordingsList.setPrefWidth(360);
         recordingsList.setMaxWidth(360);
@@ -230,14 +230,11 @@ public class RecordingDialog extends Dialog<ButtonType> {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
-                    setTextFill(Color.web("#f4e4c1"));
                     setContextMenu(null);
                 } else {
                     String ts = item.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
                     setText(ts + "  •  " + new File(item.filePath()).getName());
-                    // Ensure readable text color on selection highlight
-                    setTextFill(isSelected() ? Color.web("#3a2f27") : Color.web("#f4e4c1"));
-                    selectedProperty().addListener((o, ov, nv) -> setTextFill(nv ? Color.web("#3a2f27") : Color.web("#f4e4c1")));
+                    // rely on CSS for text color in normal and selected states
                     // Context menu for rename/delete
                     MenuItem rename = new MenuItem("Rename...");
                     rename.setOnAction(e -> {
@@ -251,7 +248,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
                         td.setTitle("Rename Recording");
                         td.setHeaderText("Enter a new name for the recording (will save as .wav)");
                         if (cssUrl != null) td.getDialogPane().getStylesheets().add(cssUrl);
-                        td.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+                        td.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
                         Button okR = (Button) td.getDialogPane().lookupButton(ButtonType.OK);
                         if (okR != null) okR.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
                         Button cancelR = (Button) td.getDialogPane().lookupButton(ButtonType.CANCEL);
@@ -283,7 +280,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
                         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Delete this recording?", ButtonType.OK, ButtonType.CANCEL);
                         confirm.setHeaderText("Confirm Delete");
                         if (cssUrl != null) confirm.getDialogPane().getStylesheets().add(cssUrl);
-                        confirm.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+                        confirm.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
                         Button okD = (Button) confirm.getDialogPane().lookupButton(ButtonType.OK);
                         if (okD != null) okD.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
                         Button cancelD = (Button) confirm.getDialogPane().lookupButton(ButtonType.CANCEL);
@@ -308,6 +305,15 @@ public class RecordingDialog extends Dialog<ButtonType> {
                         });
                     });
                     ContextMenu cm = new ContextMenu(rename, del);
+                    if (cssUrl != null) {
+                        cm.setOnShowing(ev -> {
+                            try {
+                                if (cm.getScene() != null && !cm.getScene().getStylesheets().contains(cssUrl)) {
+                                    cm.getScene().getStylesheets().add(cssUrl);
+                                }
+                            } catch (Exception ignored) {}
+                        });
+                    }
                     setContextMenu(cm);
                 }
             }
@@ -371,7 +377,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
         if (cssUrl != null) getDialogPane().getStylesheets().add(cssUrl);
         getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         // Dialog theming and buttons
-        getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
         getDialogPane().setPrefWidth(380);
         getDialogPane().setMinWidth(Region.USE_PREF_SIZE);
         getDialogPane().setMaxWidth(Region.USE_PREF_SIZE);
@@ -475,7 +481,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
             success.setHeaderText(null);
             success.setContentText("Your audio diary entry has been saved!");
             if (cssUrl != null) success.getDialogPane().getStylesheets().add(cssUrl);
-            success.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+            success.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
             Button okBtn2 = (Button) success.getDialogPane().lookupButton(ButtonType.OK);
             if (okBtn2 != null) okBtn2.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
             success.setOnShown(evs -> {
@@ -506,7 +512,7 @@ public class RecordingDialog extends Dialog<ButtonType> {
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
         if (cssUrl != null) alert.getDialogPane().getStylesheets().add(cssUrl);
-        alert.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        alert.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
         Button okE = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
         if (okE != null) okE.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
         alert.setOnShown(eve -> {

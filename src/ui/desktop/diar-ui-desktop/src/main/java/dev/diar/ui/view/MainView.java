@@ -6,6 +6,7 @@ import dev.diar.app.service.RecordingService;
 import dev.diar.ui.ApplicationContext;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
@@ -18,6 +19,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
@@ -37,6 +39,8 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import javafx.util.Duration;
+import java.awt.Desktop;
+import java.nio.file.Path;
 
 public class MainView extends BorderPane {
     private final CategoryService categoryService;
@@ -82,23 +86,44 @@ public class MainView extends BorderPane {
         MenuBar menuBar = new MenuBar();
 
         Menu fileMenu = new Menu("File");
-        MenuItem exportItem = new MenuItem("Export...");
-        exportItem.setOnAction(e -> doExport());
+        MenuItem newTowerItem = new MenuItem("New Tower...");
+        newTowerItem.setOnAction(e -> showAddCategoryDialog());
+        MenuItem audioDiaryItem = new MenuItem("Audio Diary...");
+        audioDiaryItem.setOnAction(e -> showRecordingDialog());
         MenuItem importItem = new MenuItem("Import...");
         importItem.setOnAction(e -> doImport());
-        fileMenu.getItems().addAll(exportItem, importItem);
-
-        Menu toolsMenu = new Menu("Tools");
-        MenuItem morningRoutineItem = new MenuItem("Run Morning Routine");
-        morningRoutineItem.setOnAction(e -> doMorningRoutine());
-        toolsMenu.getItems().add(morningRoutineItem);
+        MenuItem exportItem = new MenuItem("Export...");
+        exportItem.setOnAction(e -> doExport());
+        MenuItem openDataFolderItem = new MenuItem("Open Data Folder");
+        openDataFolderItem.setOnAction(e -> openDataFolder());
+        MenuItem openRecsFolderItem = new MenuItem("Open Recordings Folder");
+        openRecsFolderItem.setOnAction(e -> openRecordingsFolder());
+        MenuItem exitItem = new MenuItem("Exit");
+        exitItem.setOnAction(e -> Platform.exit());
+        fileMenu.getItems().addAll(
+            newTowerItem,
+            audioDiaryItem,
+            new SeparatorMenuItem(),
+            importItem,
+            exportItem,
+            new SeparatorMenuItem(),
+            openDataFolderItem,
+            openRecsFolderItem,
+            new SeparatorMenuItem(),
+            exitItem
+        );
 
         Menu settingsMenu = new Menu("Settings");
         MenuItem storageItem = new MenuItem("Storage...");
         storageItem.setOnAction(e -> new SettingsDialog(applicationContext).showAndWait());
         settingsMenu.getItems().add(storageItem);
 
-        menuBar.getMenus().addAll(fileMenu, toolsMenu, settingsMenu);
+        Menu helpMenu = new Menu("Help");
+        MenuItem aboutItem = new MenuItem("About...");
+        aboutItem.setOnAction(e -> showAboutDialog());
+        helpMenu.getItems().addAll(aboutItem);
+
+        menuBar.getMenus().addAll(fileMenu, settingsMenu, helpMenu);
         return menuBar;
     }
 
@@ -266,7 +291,7 @@ public class MainView extends BorderPane {
         String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
         if (css != null) dialog.getDialogPane().getStylesheets().add(css);
         // Ensure dialog pane itself uses dark palette and focus colors
-        dialog.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        dialog.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
         // Reuse Settings button colors for OK/Cancel
         Button okBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         if (okBtn != null) {
@@ -303,6 +328,39 @@ public class MainView extends BorderPane {
     private void showRecordingDialog() {
         RecordingDialog dialog = new RecordingDialog(recordingService);
         dialog.showAndWait();
+    }
+
+    private void openDataFolder() {
+        try {
+            Path dir = Path.of(System.getProperty("user.home"), ".diar-e", "data");
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(dir.toFile());
+            }
+        } catch (Exception ex) {
+            showError("Open failed: " + ex.getMessage());
+        }
+    }
+
+    private void openRecordingsFolder() {
+        try {
+            Path dir = Path.of(System.getProperty("user.home"), ".diar-e", "recordings");
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(dir.toFile());
+            }
+        } catch (Exception ex) {
+            showError("Open failed: " + ex.getMessage());
+        }
+    }
+
+    private void showAboutDialog() {
+        Alert about = new Alert(Alert.AlertType.INFORMATION);
+        about.setTitle("About");
+        about.setHeaderText("DIAR-E");
+        about.setContentText("Daily Achievement Logger\nhttps://github.com/S1mplector/DIAR-E");
+        String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
+        if (css != null) about.getDialogPane().getStylesheets().add(css);
+        about.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
+        about.showAndWait();
     }
 
     private void styleButton(Button button, String bgColor) {
@@ -369,19 +427,7 @@ public class MainView extends BorderPane {
         }
     }
 
-    private void doMorningRoutine() {
-        try {
-            boolean ran = applicationContext.getMorningRoutineCoordinator().runIfDue();
-            if (ran) {
-                updateStatus("Morning routine completed.");
-                updateEnergyLabel();
-            } else {
-                updateStatus("Morning routine not due.");
-            }
-        } catch (Exception ex) {
-            showError("Morning routine failed: " + ex.getMessage());
-        }
-    }
+    
 
     private void updateEnergyLabel() {
         try {

@@ -77,7 +77,7 @@ public class TowerGalleryDialog extends Stage {
         // Left: towers list
         towersList = new ListView<>();
         towersList.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1; " +
-                "-fx-selection-bar: #FFC107; -fx-selection-bar-non-focused: #E0B000; -fx-selection-bar-text: #3a2f27;");
+                "-fx-selection-bar: -diar-highlight; -fx-selection-bar-non-focused: derive(-diar-highlight, -10%); -fx-selection-bar-text: -diar-highlight-text;");
         towersList.setPrefWidth(260);
         towersList.setCellFactory(lv -> new ListCell<>() {
             @Override
@@ -119,7 +119,7 @@ public class TowerGalleryDialog extends Stage {
         blockFilterField.textProperty().addListener((obs, ov, nv) -> applyBlockFilter());
         blockListView = new ListView<>();
         blockListView.setStyle("-fx-background-insets: 0; -fx-background-color: #3a2f27; -fx-control-inner-background: #3a2f27; -fx-text-fill: #f4e4c1; " +
-                "-fx-selection-bar: #FFC107; -fx-selection-bar-non-focused: #E0B000; -fx-selection-bar-text: #3a2f27;");
+                "-fx-selection-bar: -diar-highlight; -fx-selection-bar-non-focused: derive(-diar-highlight, -10%); -fx-selection-bar-text: -diar-highlight-text;");
         blockListView.setPrefWidth(300);
         blockListView.setCellFactory(lv -> new ListCell<>(){
             @Override
@@ -464,7 +464,7 @@ public class TowerGalleryDialog extends Stage {
         String css = getClass().getResource("/css/app.css") != null ? getClass().getResource("/css/app.css").toExternalForm() : null;
         if (css != null) dialog.getDialogPane().getStylesheets().add(css);
         // Match Create Category dialog styling
-        dialog.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: #FFC107; -fx-faint-focus-color: rgba(255,193,7,0.20);");
+        dialog.getDialogPane().setStyle("-fx-background-color: #3a2f27; -fx-base: #3a2f27; -fx-control-inner-background: #2e2e2e; -fx-text-background-color: #d4c4a1; -fx-focus-color: -diar-highlight; -fx-faint-focus-color: rgba(122,106,90,0.25);");
         Button closeBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.CLOSE);
         if (closeBtn != null) {
             closeBtn.setStyle("-fx-background-color: #3a2f27; -fx-text-fill: #f4e4c1; -fx-font-weight: bold; -fx-border-color: #2a1f17; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6;");
