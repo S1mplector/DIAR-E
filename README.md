@@ -1,5 +1,7 @@
 # DIAR-E
 
+> Status: Development of DIAR-E has ended. This project is no longer in active development.
+
 A WALL-E inspired multi-module Java 21 + JavaFX application for mood and achievement logging with audio diary capabilities.
 
 **DIAR-E was inspired by WALL-E** - how he keeps going no matter what, and still does something every day, block by block, building towers of blocks.
@@ -82,11 +84,11 @@ Each block represents one achievement. When you reach the tower target, a new to
 
 ### Audio Diary
 
-1. Click **"🎤 Audio Diary"** button
-2. Click **"⏺ Start Recording"** to begin
+1. Click **" Audio Diary"** button
+2. Click **" Start Recording"** to begin
 3. Speak your thoughts and reflections
 4. Watch the audio level meter in real-time
-5. Click **"⏹ Stop Recording"** when done
+5. Click **" Stop Recording"** when done
 6. Recording is saved as WAV file in `~/.diar-e/recordings/`
 
 ## Project Structure

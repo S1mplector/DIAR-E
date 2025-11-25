@@ -1,6 +1,6 @@
-dev\diar\core\model\Tower.class
-dev\diar\core\model\Category.class
-dev\diar\core\model\Recording.class
-dev\diar\core\model\Block.class
-dev\diar\core\model\EnergyStatus.class
-dev\diar\core\model\LogEntry.class
+dev/diar/core/model/Category.class
+dev/diar/core/model/Tower.class
+dev/diar/core/model/Block.class
+dev/diar/core/model/Recording.class
+dev/diar/core/model/EnergyStatus.class
+dev/diar/core/model/LogEntry.class
